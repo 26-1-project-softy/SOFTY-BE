@@ -31,7 +31,7 @@ public class AuthController {
     private final AuthService authService;
     private final TokenAuthService tokenAuthService;
 
-        @PostMapping("/kakao/login")
+    @PostMapping("/kakao/login")
     public ResponseEntity<ApiResponse<KakaoLoginData>> kakaoLogin(@RequestBody KakaoLoginRequest request) {
         KakaoLoginResult result = authService.loginWithKakaoAccessToken(
                 request == null ? null : request.kakaoAccessToken()
@@ -39,11 +39,11 @@ public class AuthController {
 
         ApiResponse<KakaoLoginData> response = ApiResponse.of(
                 true,
-                200,
-                "Login successful.",
-                new KakaoLoginData(result.accessToken(), result.refreshToken())
+                201,
+                "\uB85C\uADF8\uC778\uC5D0 \uC131\uACF5 \uD558\uC600\uC2B5\uB2C8\uB2E4.",
+                new KakaoLoginData(result.accessToken(), result.refreshToken(), result.registrationRequired())
         );
-        return ResponseEntity.ok(response);
+        return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
     @PostMapping("/teachers/signup")

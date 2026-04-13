@@ -56,7 +56,8 @@ public class AuthService {
         User user = upsertKakaoUser(kakaoAccessToken.trim());
         String accessToken = jwtService.createAccessToken(user.getId(), user.getName(), user.getRole());
         String refreshToken = jwtService.createRefreshToken(user.getId(), user.getRole());
-        return new KakaoLoginResult(accessToken, refreshToken);
+        boolean registrationRequired = isRegistrationRequired(user.getRole());
+        return new KakaoLoginResult(accessToken, refreshToken, registrationRequired);
     }
 
     @Transactional
