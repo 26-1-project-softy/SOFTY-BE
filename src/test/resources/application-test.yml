@@ -19,9 +19,7 @@ spring:
 
 oauth:
   kakao:
-    client-id: test-client-id
-    client-secret: test-client-secret
-    redirect-uri: http://localhost:8080/auth/kakao/callback
+    user-info-uri: https://kapi.kakao.com/v2/user/me
 
 jwt:
   secret: test-jwt-secret-for-local-tests-only
@@ -30,6 +28,3 @@ jwt:
 
 admin:
   provision-key: test-admin-provision-key
-
-app:
-  frontend-redirect-uri: http://localhost:5173

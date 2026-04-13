@@ -2,7 +2,7 @@ package com.softy.be.auth.service;
 
 public record KakaoLoginResult(
         String accessToken,
-        String refreshToken
+        String refreshToken,
+        boolean registrationRequired
 ) {
 }
-
