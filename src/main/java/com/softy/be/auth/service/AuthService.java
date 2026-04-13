@@ -48,16 +48,6 @@ public class AuthService {
     private final JwtService jwtService;
 
     @Transactional
-    public AuthResult loginWithKakaoCode(String code) {
-        String kakaoAccessToken = kakaoOAuthClient.exchangeCodeForAccessToken(code);
-        User user = upsertKakaoUser(kakaoAccessToken);
-
-        String accessToken = jwtService.createAccessToken(user.getId(), user.getName(), user.getRole());
-        boolean registrationRequired = isRegistrationRequired(user.getRole());
-        return new AuthResult(accessToken, user.getId(), user.getName(), user.getRole(), KAKAO_PROVIDER, registrationRequired);
-    }
-
-    @Transactional
     public KakaoLoginResult loginWithKakaoAccessToken(String kakaoAccessToken) {
         if (isBlank(kakaoAccessToken)) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "kakaoAccessToken is required");

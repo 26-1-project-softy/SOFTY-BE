@@ -5,4 +5,3 @@ public record KakaoLoginData(
         String refreshToken
 ) {
 }
-
