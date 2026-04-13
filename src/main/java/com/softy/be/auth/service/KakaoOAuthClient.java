@@ -30,7 +30,7 @@ public class KakaoOAuthClient {
 
         JsonNode responseBody = response.getBody();
         if (responseBody == null || responseBody.path("id").isMissingNode()) {
-            throw new IllegalStateException("Failed to fetch Kakao user profile.");
+            throw new IllegalStateException("카카오 사용자 정보를 가져오지 못했습니다.");
         }
 
         String providerUserId = responseBody.path("id").asText();

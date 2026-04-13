@@ -40,7 +40,7 @@ public class AuthController {
         ApiResponse<KakaoLoginData> response = ApiResponse.of(
                 true,
                 201,
-                "\uB85C\uADF8\uC778\uC5D0 \uC131\uACF5 \uD558\uC600\uC2B5\uB2C8\uB2E4.",
+                "로그인에 성공 하였습니다.",
                 new KakaoLoginData(result.accessToken(), result.refreshToken(), result.registrationRequired())
         );
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
@@ -57,7 +57,7 @@ public class AuthController {
         ApiResponse<SignupUserData> response = ApiResponse.of(
                 true,
                 201,
-                "Teacher signup completed.",
+                "교사 회원가입이 완료되었습니다.",
                 new SignupUserData(result.userId(), result.role())
         );
 
@@ -75,7 +75,7 @@ public class AuthController {
         ApiResponse<SignupUserData> response = ApiResponse.of(
                 true,
                 201,
-                "Parent signup completed.",
+                "학부모 회원가입이 완료되었습니다.",
                 new SignupUserData(result.userId(), result.role())
         );
 
@@ -92,12 +92,10 @@ public class AuthController {
         ApiResponse<ClassCodeData> response = ApiResponse.of(
                 true,
                 201,
-                "Class code issued successfully.",
+                "클래스 코드 발급이 완료되었습니다.",
                 new ClassCodeData(result.classCode())
         );
 
         return ResponseEntity.ok(response);
     }
 }
-
-

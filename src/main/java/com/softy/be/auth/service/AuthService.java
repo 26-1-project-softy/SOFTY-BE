@@ -6,15 +6,15 @@ import com.softy.be.domain.school.ClassCode;
 import com.softy.be.domain.school.Classroom;
 import com.softy.be.domain.school.ParentStudent;
 import com.softy.be.domain.school.School;
-import com.softy.be.domain.user.SocialAccount;
 import com.softy.be.domain.school.Student;
+import com.softy.be.domain.user.SocialAccount;
 import com.softy.be.domain.user.User;
 import com.softy.be.repository.school.ClassCodeRepository;
 import com.softy.be.repository.school.ClassroomRepository;
 import com.softy.be.repository.school.ParentStudentRepository;
 import com.softy.be.repository.school.SchoolRepository;
-import com.softy.be.repository.user.SocialAccountRepository;
 import com.softy.be.repository.school.StudentRepository;
+import com.softy.be.repository.user.SocialAccountRepository;
 import com.softy.be.repository.user.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -50,7 +50,7 @@ public class AuthService {
     @Transactional
     public KakaoLoginResult loginWithKakaoAccessToken(String kakaoAccessToken) {
         if (isBlank(kakaoAccessToken)) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "kakaoAccessToken is required");
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "카카오 액세스 토큰은 필수입니다");
         }
 
         User user = upsertKakaoUser(kakaoAccessToken.trim());
@@ -187,11 +187,11 @@ public class AuthService {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "학생 생일은 필수입니다");
         }
         if (isBlank(request.studentGender())) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "학생 성별는 필수입니다");
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "학생 성별은 필수입니다");
         }
         String gender = request.studentGender().trim().toUpperCase();
         if (!"M".equals(gender) && !"F".equals(gender)) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "학생 성별는 M 또는 F로 입력해야 합니다");
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "학생 성별은 M 또는 F로 입력해야 합니다");
         }
         if (isBlank(request.classCode())) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "학급 코드는 필수입니다");
