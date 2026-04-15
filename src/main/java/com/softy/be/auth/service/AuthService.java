@@ -116,15 +116,29 @@ public class AuthService {
         ClassCode classCode = classCodeRepository.findFirstByCodeOrderByIdDesc(request.classCode().trim())
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "유효한 학급 코드를 찾을 수 없습니다"));
 
-        Student student = studentRepository.save(
-                Student.create(
-                        request.studentName().trim(),
+        String studentName = request.studentName().trim();
+        String studentGender = request.studentGender().trim().toUpperCase();
+        Long classroomId = classCode.getClassroom().getId();
+
+        Student student = studentRepository
+                .findFirstByClassroomIdAndNameAndBirthdayAndGenderOrderByIdDesc(
+                        classroomId,
+                        studentName,
                         request.studentBirthday(),
-                        request.studentGender().trim().toUpperCase(),
-                        classCode.getClassroom()
+                        studentGender
                 )
-        );
-        parentStudentRepository.save(ParentStudent.create(user, student));
+                .orElseGet(() -> studentRepository.save(
+                        Student.create(
+                                studentName,
+                                request.studentBirthday(),
+                                studentGender,
+                                classCode.getClassroom()
+                        )
+                ));
+
+        if (!parentStudentRepository.existsByParentIdAndStudentId(user.getId(), student.getId())) {
+            parentStudentRepository.save(ParentStudent.create(user, student));
+        }
 
         user.completeParentSignup(request.parentName().trim());
         return new ParentSignupResult(user.getId(), user.getRole());
