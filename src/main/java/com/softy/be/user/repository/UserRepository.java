@@ -1,6 +1,6 @@
-package com.softy.be.repository.user;
+package com.softy.be.user.repository;
 
-import com.softy.be.domain.user.User;
+import com.softy.be.user.entity.User;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.Optional;

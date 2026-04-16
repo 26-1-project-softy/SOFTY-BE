@@ -12,7 +12,7 @@ import com.softy.be.auth.service.KakaoLoginResult;
 import com.softy.be.auth.service.ParentSignupResult;
 import com.softy.be.auth.service.TeacherSignupResult;
 import com.softy.be.auth.service.TokenAuthService;
-import com.softy.be.global.api.ApiResponse;
+import com.softy.be.common.api.ApiResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;

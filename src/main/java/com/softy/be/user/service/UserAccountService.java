@@ -1,12 +1,12 @@
 package com.softy.be.user.service;
 
-import com.softy.be.domain.school.Classroom;
-import com.softy.be.domain.school.ParentStudent;
-import com.softy.be.domain.user.User;
-import com.softy.be.repository.school.ClassroomRepository;
-import com.softy.be.repository.school.ParentStudentRepository;
-import com.softy.be.repository.user.SocialAccountRepository;
-import com.softy.be.repository.user.UserRepository;
+import com.softy.be.school.entity.Classroom;
+import com.softy.be.school.entity.ParentStudent;
+import com.softy.be.user.entity.User;
+import com.softy.be.school.repository.ClassroomRepository;
+import com.softy.be.school.repository.ParentStudentRepository;
+import com.softy.be.user.repository.SocialAccountRepository;
+import com.softy.be.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;

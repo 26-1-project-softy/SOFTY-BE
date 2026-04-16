@@ -1,4 +1,4 @@
-package com.softy.be.global.api;
+package com.softy.be.common.api;
 
 public record ApiResponse<T>(
         boolean success,

@@ -4,7 +4,7 @@ import com.softy.be.admin.dto.AdminLoginData;
 import com.softy.be.admin.dto.AdminLoginRequest;
 import com.softy.be.admin.dto.AdminRegisterData;
 import com.softy.be.admin.dto.AdminRegisterRequest;
-import com.softy.be.global.api.ApiResponse;
+import com.softy.be.common.api.ApiResponse;
 import com.softy.be.admin.service.AdminAuthService;
 import com.softy.be.admin.service.AdminLoginResult;
 import com.softy.be.admin.service.AdminRegisterResult;

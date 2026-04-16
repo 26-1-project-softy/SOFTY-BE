@@ -1,6 +1,6 @@
-package com.softy.be.domain.user;
+package com.softy.be.user.entity;
 
-import com.softy.be.domain.common.BaseEntity;
+import com.softy.be.common.entity.BaseEntity;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;

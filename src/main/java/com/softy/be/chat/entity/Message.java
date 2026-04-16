@@ -1,7 +1,7 @@
-package com.softy.be.domain.chat;
+package com.softy.be.chat.entity;
 
-import com.softy.be.domain.common.BaseEntity;
-import com.softy.be.domain.user.User;
+import com.softy.be.common.entity.BaseEntity;
+import com.softy.be.user.entity.User;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;

@@ -1,6 +1,6 @@
-package com.softy.be.repository.school;
+package com.softy.be.school.repository;
 
-import com.softy.be.domain.school.School;
+import com.softy.be.school.entity.School;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.Optional;

@@ -1,7 +1,7 @@
-package com.softy.be.domain.school;
+package com.softy.be.school.entity;
 
-import com.softy.be.domain.common.BaseEntity;
-import com.softy.be.domain.user.User;
+import com.softy.be.common.entity.BaseEntity;
+import com.softy.be.user.entity.User;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;

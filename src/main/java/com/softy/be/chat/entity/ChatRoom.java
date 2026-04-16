@@ -1,6 +1,6 @@
-package com.softy.be.domain.school;
+package com.softy.be.chat.entity;
 
-import com.softy.be.domain.common.BaseEntity;
+import com.softy.be.common.entity.BaseEntity;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
@@ -11,16 +11,13 @@ import lombok.NoArgsConstructor;
 @Entity
 @Getter
 @NoArgsConstructor
-public class School extends BaseEntity {
+public class ChatRoom extends BaseEntity {
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    private String name;
+    private String intentLabel;
 
-    public static School create(String name) {
-        School school = new School();
-        school.name = name;
-        return school;
-    }
+    private String status;
 }

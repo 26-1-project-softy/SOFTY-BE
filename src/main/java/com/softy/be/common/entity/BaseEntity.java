@@ -1,4 +1,4 @@
-package com.softy.be.domain.common;
+package com.softy.be.common.entity;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.MappedSuperclass;
