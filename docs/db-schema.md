@@ -1,9 +1,13 @@
-﻿# DB Schema (Draft)
+﻿# DB Schema (PostgreSQL 기준)
 
-이 문서는 현재 JPA 엔티티 기준의 DB 스키마 초안입니다.
-실제 운영 스키마와 차이가 있을 수 있으므로, 변경 시 함께 업데이트하세요.
+이 문서는 현재 공유된 PostgreSQL 스키마 기준입니다.
+실행 가능한 SQL 원문은 `docs/db-schema-postgres.sql` 파일을 참고하세요.
 
-## 1. 테이블 목록
+## 1. 확장
+
+- `CREATE EXTENSION IF NOT EXISTS vector`
+
+## 2. 테이블 목록 (총 15개)
 
 - `users`
 - `social_account`
@@ -12,14 +16,23 @@
 - `class_code`
 - `student`
 - `parent_student`
+- `teacher_setting`
 - `chat_room`
+- `chat_room_user_map`
 - `message`
+- `ai_recommendation`
+- `pdf_file`
+- `model_training_history`
+- `ai_feedback`
 
-모든 테이블은 공통 컬럼을 가집니다.
-- `created_at` (NOT NULL)
-- `updated_at` (NOT NULL)
+## 3. 공통 컬럼
 
-## 2. 테이블 요약
+대부분 테이블은 아래 공통 컬럼을 가집니다.
+
+- `created_at` (NOT NULL, DEFAULT CURRENT_TIMESTAMP)
+- `updated_at` (NOT NULL, DEFAULT CURRENT_TIMESTAMP)
+
+## 4. 테이블 요약
 
 ### `users`
 - PK: `id`
@@ -28,7 +41,7 @@
 ### `social_account`
 - PK: `id`
 - FK: `user_id -> users.id` (NOT NULL)
-- 컬럼: `provider` (NOT NULL), `provider_user_id` (NOT NULL)
+- 컬럼: `provider`, `provider_user_id`
 
 ### `school`
 - PK: `id`
@@ -36,18 +49,18 @@
 
 ### `classroom`
 - PK: `id`
-- FK: `school_id -> school.id`
-- FK: `teacher_id -> users.id`
+- FK: `school_id -> school.id` (NOT NULL)
+- FK: `teacher_id -> users.id` (NOT NULL)
 - 컬럼: `grade`, `class_number`
 
 ### `class_code`
 - PK: `id`
 - FK: `classroom_id -> classroom.id` (NOT NULL)
-- 컬럼: `code` (NOT NULL)
+- 컬럼: `code`
 
 ### `student`
 - PK: `id`
-- FK: `classroom_id -> classroom.id`
+- FK: `classroom_id -> classroom.id` (NOT NULL)
 - 컬럼: `name`, `birthday`, `gender`
 
 ### `parent_student`
@@ -55,35 +68,67 @@
 - FK: `parent_id -> users.id` (NOT NULL)
 - FK: `student_id -> student.id` (NOT NULL)
 
+### `teacher_setting`
+- PK: `id`
+- FK: `teacher_id -> users.id` (NOT NULL)
+- 컬럼: `day_of_week`, `start_time`, `end_time`
+
 ### `chat_room`
 - PK: `id`
 - 컬럼: `intent_label`, `status`
 
+### `chat_room_user_map`
+- PK: `id`
+- FK: `chat_room_id -> chat_room.id` (NOT NULL)
+- FK: `user_id -> users.id` (NOT NULL)
+- 컬럼: `unread_count`, `last_read_at`
+
 ### `message`
 - PK: `id`
-- FK: `chat_room_id -> chat_room.id`
-- FK: `sender_id -> users.id`
-- 컬럼:
-  - `type`
-  - `content` (TEXT)
-  - `modify_content` (TEXT)
-  - `similarity_original` (FLOAT)
-  - `similarity_modified` (FLOAT)
-  - `is_dispute_risk` (BOOLEAN)
+- FK: `chat_room_id -> chat_room.id` (NOT NULL)
+- FK: `sender_id -> users.id` (NOT NULL)
+- 컬럼: `type`, `content`, `modify_content`
+- 벡터/유사도: `content_embedding (VECTOR)`, `modify_content_embedding (VECTOR)`, `similarity_original`, `similarity_modified`
+- 분쟁위험: `is_dispute_risk`
 
-## 3. 관계 요약
+### `ai_recommendation`
+- PK: `id`
+- FK: `message_id -> message.id` (NOT NULL)
+- 컬럼: `content`, `embedding (VECTOR)`, `is_recommendation_used`
+
+### `pdf_file`
+- PK: `id`
+- FK: `chat_room_id -> chat_room.id` (NOT NULL)
+- 컬럼: `file_url`, `file_name`
+
+### `model_training_history`
+- PK: `id`
+- 컬럼: `jobId`, `evaluation_id`, `trained_at`, `model_version`, `dataset_version`, `f1_score`, `status`, `is_deployed`, `model_path`
+- FK: 없음
+
+### `ai_feedback`
+- PK: `id`
+- FK: `message_id -> message.id` (NOT NULL)
+- 컬럼: `type`, `actual_risk_score`
+
+## 5. 관계 요약
 
 - `users (1) - (N) social_account`
 - `users (1) - (N) classroom` (`teacher_id`)
+- `users (1) - (N) teacher_setting` (`teacher_id`)
+- `users (1) - (N) chat_room_user_map`
+- `users (1) - (N) message` (`sender_id`)
 - `school (1) - (N) classroom`
 - `classroom (1) - (N) class_code`
 - `classroom (1) - (N) student`
 - `users (1) - (N) parent_student` (`parent_id`)
 - `student (1) - (N) parent_student`
+- `chat_room (1) - (N) chat_room_user_map`
 - `chat_room (1) - (N) message`
-- `users (1) - (N) message` (`sender_id`)
+- `chat_room (1) - (N) pdf_file`
+- `message (1) - (N) ai_recommendation`
+- `message (1) - (N) ai_feedback`
 
-## 4. 참고
+## 6. 참고
 
-- 현재 애플리케이션 설정은 `spring.jpa.hibernate.ddl-auto=validate` 입니다.
-- 즉, 애플리케이션이 테이블을 생성하지 않고, 사전 준비된 스키마를 검증만 합니다.
+- 애플리케이션 설정이 `spring.jpa.hibernate.ddl-auto=validate` 인 경우, 애플리케이션은 테이블을 생성하지 않고 사전 준비된 스키마를 검증합니다.
