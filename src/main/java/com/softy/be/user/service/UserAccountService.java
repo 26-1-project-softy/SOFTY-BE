@@ -12,6 +12,8 @@ import com.softy.be.school.repository.SchoolRepository;
 import com.softy.be.school.repository.TeacherSettingRepository;
 import com.softy.be.school.service.ClassCodeService;
 import com.softy.be.user.dto.TeacherClassUpdateRequest;
+import com.softy.be.user.dto.TeacherWorkHoursScheduleRequest;
+import com.softy.be.user.dto.TeacherWorkHoursUpdateRequest;
 import com.softy.be.user.repository.SocialAccountRepository;
 import com.softy.be.user.repository.UserRepository;
 import com.softy.be.user.entity.User;
@@ -21,9 +23,13 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
+import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 @Service
 @RequiredArgsConstructor
@@ -131,6 +137,60 @@ public class UserAccountService {
                 user.getName(),
                 schedules
         );
+    }
+
+    @Transactional
+    public void updateTeacherWorkHours(Long userId, TeacherWorkHoursUpdateRequest request) {
+        if (request == null || request.schedules() == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "요청 본문이 필요합니다");
+        }
+
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "사용자를 찾을 수 없습니다"));
+
+        if (!"TEACHER".equalsIgnoreCase(user.getRole())) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "교사 계정만 근무시간을 변경할 수 있습니다");
+        }
+
+        List<TeacherSetting> newSettings = buildTeacherSettings(user, request.schedules());
+
+        teacherSettingRepository.deleteAllByTeacherId(userId);
+        if (!newSettings.isEmpty()) {
+            teacherSettingRepository.saveAll(newSettings);
+        }
+    }
+
+    private List<TeacherSetting> buildTeacherSettings(User user, List<TeacherWorkHoursScheduleRequest> schedules) {
+        Set<Short> days = new HashSet<>();
+        List<TeacherSetting> settings = new ArrayList<>();
+        LocalDate baseDate = LocalDate.of(1970, 1, 1);
+
+        for (TeacherWorkHoursScheduleRequest schedule : schedules) {
+            if (schedule == null) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "근무시간 정보가 비어 있습니다");
+            }
+            if (schedule.dayOfWeek() == null || schedule.dayOfWeek() < 1 || schedule.dayOfWeek() > 7) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "dayOfWeek는 1~7 사이여야 합니다");
+            }
+            if (!days.add(schedule.dayOfWeek())) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "요일은 중복될 수 없습니다");
+            }
+            if (schedule.startTime() == null || schedule.endTime() == null) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "근무 시작/종료 시간은 필수입니다");
+            }
+            if (!schedule.startTime().isBefore(schedule.endTime())) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "근무 시작 시간은 종료 시간보다 빨라야 합니다");
+            }
+
+            settings.add(TeacherSetting.create(
+                    user,
+                    schedule.dayOfWeek(),
+                    LocalDateTime.of(baseDate, schedule.startTime()),
+                    LocalDateTime.of(baseDate, schedule.endTime())
+            ));
+        }
+
+        return settings;
     }
 
     private TeacherSettingScheduleResult toTeacherSettingScheduleResult(TeacherSetting setting) {

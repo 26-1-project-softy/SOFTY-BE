@@ -38,4 +38,13 @@ public class TeacherSetting extends BaseEntity {
 
     @Column(name = "end_time", nullable = false)
     private LocalDateTime endTime;
+
+    public static TeacherSetting create(User teacher, short dayOfWeek, LocalDateTime startTime, LocalDateTime endTime) {
+        TeacherSetting setting = new TeacherSetting();
+        setting.teacher = teacher;
+        setting.dayOfWeek = dayOfWeek;
+        setting.startTime = startTime;
+        setting.endTime = endTime;
+        return setting;
+    }
 }

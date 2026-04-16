@@ -7,4 +7,5 @@ import java.util.List;
 
 public interface TeacherSettingRepository extends JpaRepository<TeacherSetting, Long> {
     List<TeacherSetting> findByTeacherIdOrderByDayOfWeekAscIdAsc(Long teacherId);
+    void deleteAllByTeacherId(Long teacherId);
 }

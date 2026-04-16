@@ -6,6 +6,7 @@ import com.softy.be.user.dto.TeacherClassUpdateData;
 import com.softy.be.user.dto.TeacherClassUpdateRequest;
 import com.softy.be.user.dto.TeacherSettingData;
 import com.softy.be.user.dto.TeacherSettingScheduleData;
+import com.softy.be.user.dto.TeacherWorkHoursUpdateRequest;
 import com.softy.be.user.service.TeacherClassUpdateResult;
 import com.softy.be.user.service.TeacherSettingResult;
 import com.softy.be.user.service.UserAccountService;
@@ -75,6 +76,24 @@ public class TeacherController {
                 200,
                 "학급이 변경되었습니다.",
                 new TeacherClassUpdateData(result.classCode())
+        );
+
+        return ResponseEntity.ok(response);
+    }
+
+    @PatchMapping("/me/work-hours")
+    public ResponseEntity<ApiResponse<Object>> updateMyWorkHours(
+            @RequestHeader(value = HttpHeaders.AUTHORIZATION, required = false) String authorization,
+            @RequestBody TeacherWorkHoursUpdateRequest request
+    ) {
+        Long userId = tokenAuthService.extractUserIdFromAuthorization(authorization);
+        userAccountService.updateTeacherWorkHours(userId, request);
+
+        ApiResponse<Object> response = ApiResponse.of(
+                true,
+                200,
+                "근무시간이 저장되었습니다.",
+                null
         );
 
         return ResponseEntity.ok(response);
