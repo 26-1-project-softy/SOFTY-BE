@@ -30,6 +30,7 @@ import java.util.Objects;
 public class AuthService {
 
     private static final String KAKAO_PROVIDER = "KAKAO";
+    private static final String DEV_KAKAO_PROVIDER = "DEV_KAKAO";
     private static final String ROLE_UNASSIGNED = "UNASSIGNED";
     private static final String ROLE_TEACHER = "TEACHER";
     private static final String ROLE_PARENT = "PARENT";
@@ -52,6 +53,28 @@ public class AuthService {
         }
 
         User user = upsertKakaoUser(kakaoAccessToken.trim());
+        String accessToken = jwtService.createAccessToken(user.getId(), user.getName(), user.getRole());
+        String refreshToken = jwtService.createRefreshToken(user.getId(), user.getRole());
+        boolean registrationRequired = isRegistrationRequired(user.getRole());
+        return new KakaoLoginResult(accessToken, refreshToken, registrationRequired);
+    }
+
+    @Transactional
+    public KakaoLoginResult loginForDev(String socialId, String role, String nickname) {
+        if (isBlank(socialId)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "socialId is required.");
+        }
+
+        String normalizedRole = normalizeRoleForDev(role);
+        String resolvedNickname = resolveDevNickname(socialId, nickname);
+
+        SocialAccount socialAccount = socialAccountRepository
+                .findByProviderAndProviderUserId(DEV_KAKAO_PROVIDER, socialId.trim())
+                .orElseGet(() -> createDevKakaoAccount(socialId.trim(), resolvedNickname));
+
+        User user = socialAccount.getUser();
+        user.applyDevLoginProfile(resolvedNickname, normalizedRole);
+
         String accessToken = jwtService.createAccessToken(user.getId(), user.getName(), user.getRole());
         String refreshToken = jwtService.createRefreshToken(user.getId(), user.getRole());
         boolean registrationRequired = isRegistrationRequired(user.getRole());
@@ -148,6 +171,14 @@ public class AuthService {
         return socialAccountRepository.save(socialAccount);
     }
 
+    private SocialAccount createDevKakaoAccount(String socialId, String nickname) {
+        User user = User.createForKakao(nickname);
+        userRepository.save(user);
+
+        SocialAccount socialAccount = SocialAccount.create(user, DEV_KAKAO_PROVIDER, socialId);
+        return socialAccountRepository.save(socialAccount);
+    }
+
     private User upsertKakaoUser(String kakaoAccessToken) {
         KakaoUserProfile profile = kakaoOAuthClient.getUserProfile(kakaoAccessToken);
         SocialAccount socialAccount = socialAccountRepository
@@ -163,6 +194,35 @@ public class AuthService {
 
     private boolean isRegistrationRequired(String role) {
         return role == null || ROLE_UNASSIGNED.equalsIgnoreCase(role) || LEGACY_ROLE_USER.equalsIgnoreCase(role);
+    }
+
+    private String normalizeRoleForDev(String role) {
+        if (isBlank(role)) {
+            return ROLE_UNASSIGNED;
+        }
+
+        String normalized = role.trim().toUpperCase();
+        if (ROLE_UNASSIGNED.equals(normalized) || LEGACY_ROLE_USER.equals(normalized)) {
+            return ROLE_UNASSIGNED;
+        }
+        if (ROLE_TEACHER.equals(normalized)) {
+            return ROLE_TEACHER;
+        }
+        if (ROLE_PARENT.equals(normalized)) {
+            return ROLE_PARENT;
+        }
+
+        throw new ResponseStatusException(
+                HttpStatus.BAD_REQUEST,
+                "role must be one of UNASSIGNED, TEACHER, or PARENT."
+        );
+    }
+
+    private String resolveDevNickname(String socialId, String nickname) {
+        if (!isBlank(nickname)) {
+            return nickname.trim();
+        }
+        return "dev_" + socialId.trim();
     }
 
     private void validateTeacherSignupRequest(TeacherSignupRequest request) {
