@@ -4,7 +4,7 @@
 카카오 계정을 매번 만들지 않고도 로컬/개발 환경에서 로그인 테스트를 빠르게 하기 위해 `dev-login` 기능을 추가했습니다.
 
 - 엔드포인트: `POST /auth/dev-login`
-- 활성 프로필: `local`, `dev` 에서만 활성화
+- 활성 프로필: `local` 에서만 활성화
 - 운영(production)에서는 로드되지 않음
 
 ## 왜 만들었는가
@@ -53,6 +53,6 @@ curl -X POST "http://localhost:8080/auth/dev-login?socialId=test-001&role=TEACHE
 
 ## 주의사항
 - 이 기능은 개발 편의용입니다.
-- 프로필 제한(`local`, `dev`)이 제거되지 않도록 유지해야 합니다.
+- 프로필 제한(`local`)이 제거되지 않도록 유지해야 합니다.
 - 운영 배포 설정에서 `local`/`dev` 프로필이 켜지지 않도록 반드시 확인하세요.
 

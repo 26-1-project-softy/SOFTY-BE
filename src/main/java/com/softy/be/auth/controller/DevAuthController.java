@@ -16,7 +16,7 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @RequestMapping("/auth")
 @RequiredArgsConstructor
-@Profile({"local", "dev"})
+@Profile("local")
 public class DevAuthController {
 
     private final AuthService authService;
