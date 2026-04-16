@@ -1,21 +1,29 @@
 package com.softy.be.user.service;
 
+import com.softy.be.school.entity.ClassCode;
 import com.softy.be.school.entity.Classroom;
 import com.softy.be.school.entity.ParentStudent;
 import com.softy.be.school.entity.School;
-import com.softy.be.user.entity.User;
+import com.softy.be.school.entity.TeacherSetting;
+import com.softy.be.school.repository.ClassCodeRepository;
 import com.softy.be.school.repository.ClassroomRepository;
 import com.softy.be.school.repository.ParentStudentRepository;
 import com.softy.be.school.repository.SchoolRepository;
+import com.softy.be.school.repository.TeacherSettingRepository;
 import com.softy.be.school.service.ClassCodeService;
 import com.softy.be.user.dto.TeacherClassUpdateRequest;
 import com.softy.be.user.repository.SocialAccountRepository;
 import com.softy.be.user.repository.UserRepository;
+import com.softy.be.user.entity.User;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
+
+import java.time.LocalDateTime;
+import java.time.LocalTime;
+import java.util.List;
 
 @Service
 @RequiredArgsConstructor
@@ -26,6 +34,8 @@ public class UserAccountService {
     private final ClassroomRepository classroomRepository;
     private final ParentStudentRepository parentStudentRepository;
     private final SchoolRepository schoolRepository;
+    private final ClassCodeRepository classCodeRepository;
+    private final TeacherSettingRepository teacherSettingRepository;
     private final ClassCodeService classCodeService;
 
     @Transactional(readOnly = true)
@@ -87,6 +97,52 @@ public class UserAccountService {
 
         String classCode = classCodeService.createClassCodeForClassroom(classroom);
         return new TeacherClassUpdateResult(classCode);
+    }
+
+    @Transactional(readOnly = true)
+    public TeacherSettingResult getTeacherSetting(Long userId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "사용자를 찾을 수 없습니다"));
+
+        if (!"TEACHER".equalsIgnoreCase(user.getRole())) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "교사 계정만 설정 정보를 조회할 수 있습니다");
+        }
+
+        Classroom classroom = classroomRepository.findFirstByTeacherIdOrderByIdDesc(userId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "교사 학급 정보를 찾을 수 없습니다"));
+
+        String classCode = classCodeRepository.findFirstByClassroomIdOrderByIdDesc(classroom.getId())
+                .map(ClassCode::getCode)
+                .orElse(null);
+
+        List<TeacherSettingScheduleResult> schedules = teacherSettingRepository
+                .findByTeacherIdOrderByDayOfWeekAscIdAsc(userId)
+                .stream()
+                .map(this::toTeacherSettingScheduleResult)
+                .toList();
+
+        String schoolName = classroom.getSchool() == null ? null : classroom.getSchool().getName();
+
+        return new TeacherSettingResult(
+                classroom.getGrade(),
+                classroom.getClassNumber(),
+                schoolName,
+                classCode,
+                user.getName(),
+                schedules
+        );
+    }
+
+    private TeacherSettingScheduleResult toTeacherSettingScheduleResult(TeacherSetting setting) {
+        return new TeacherSettingScheduleResult(
+                setting.getDayOfWeek(),
+                toLocalTime(setting.getStartTime()),
+                toLocalTime(setting.getEndTime())
+        );
+    }
+
+    private LocalTime toLocalTime(LocalDateTime value) {
+        return value == null ? null : value.toLocalTime();
     }
 
     private void validateTeacherClassUpdateRequest(TeacherClassUpdateRequest request) {

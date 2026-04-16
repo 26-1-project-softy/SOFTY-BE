@@ -8,4 +8,5 @@ import java.util.Optional;
 public interface ClassCodeRepository extends JpaRepository<ClassCode, Long> {
     boolean existsByCode(String code);
     Optional<ClassCode> findFirstByCodeOrderByIdDesc(String code);
+    Optional<ClassCode> findFirstByClassroomIdOrderByIdDesc(Long classroomId);
 }
