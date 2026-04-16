@@ -14,6 +14,7 @@ import com.softy.be.school.repository.ClassroomRepository;
 import com.softy.be.school.repository.ParentStudentRepository;
 import com.softy.be.school.repository.SchoolRepository;
 import com.softy.be.school.repository.StudentRepository;
+import com.softy.be.school.service.ClassCodeService;
 import com.softy.be.user.repository.SocialAccountRepository;
 import com.softy.be.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
@@ -22,7 +23,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
-import java.security.SecureRandom;
 import java.util.Objects;
 
 @Service
@@ -34,9 +34,6 @@ public class AuthService {
     private static final String ROLE_TEACHER = "TEACHER";
     private static final String ROLE_PARENT = "PARENT";
     private static final String LEGACY_ROLE_USER = "USER";
-    private static final String CODE_CHARS = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
-    private static final SecureRandom RANDOM = new SecureRandom();
-
     private final KakaoOAuthClient kakaoOAuthClient;
     private final UserRepository userRepository;
     private final SocialAccountRepository socialAccountRepository;
@@ -46,6 +43,7 @@ public class AuthService {
     private final StudentRepository studentRepository;
     private final ParentStudentRepository parentStudentRepository;
     private final JwtService jwtService;
+    private final ClassCodeService classCodeService;
 
     @Transactional
     public KakaoLoginResult loginWithKakaoAccessToken(String kakaoAccessToken) {
@@ -78,8 +76,7 @@ public class AuthService {
                 Classroom.create(request.grade(), request.classNumber(), school, user)
         );
 
-        String code = generateUniqueClassCode();
-        classCodeRepository.save(ClassCode.create(code, classroom));
+        String code = classCodeService.createClassCodeForClassroom(classroom);
 
         user.completeTeacherSignup(request.teacherName().trim());
         return new TeacherSignupResult(user.getId(), user.getRole(), code);
@@ -97,8 +94,7 @@ public class AuthService {
         Classroom classroom = classroomRepository.findFirstByTeacherIdOrderByIdDesc(authenticatedUserId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "생성할 학급 정보를 찾을 수 없습니다"));
 
-        String code = generateUniqueClassCode();
-        classCodeRepository.save(ClassCode.create(code, classroom));
+        String code = classCodeService.createClassCodeForClassroom(classroom);
         return new ClassCodeCreateResult(code);
     }
 
@@ -210,25 +206,6 @@ public class AuthService {
         if (isBlank(request.classCode())) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "학급 코드는 필수입니다");
         }
-    }
-
-    private String generateUniqueClassCode() {
-        for (int i = 0; i < 20; i++) {
-            String candidate = randomCodeChunk(3) + "-" + randomCodeChunk(3);
-            if (!classCodeRepository.existsByCode(candidate)) {
-                return candidate;
-            }
-        }
-        throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "고유한 학급 코드를 생성하지 못했습니다");
-    }
-
-    private String randomCodeChunk(int size) {
-        StringBuilder builder = new StringBuilder(size);
-        for (int i = 0; i < size; i++) {
-            int index = RANDOM.nextInt(CODE_CHARS.length());
-            builder.append(CODE_CHARS.charAt(index));
-        }
-        return builder.toString();
     }
 
     private boolean isBlank(String value) {
