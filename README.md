@@ -78,23 +78,17 @@ docker run --env-file .env -p 8080:8080 softy-be
 ## 6. 폴더 구조
 
 ```text
-be/
+softy-be/
 ├─ src/
 │  ├─ main/
 │  │  ├─ java/com/softy/be/
-│  │  │  ├─ admin/         # 관리자 인증 도메인 (controller/dto/service)
-│  │  │  ├─ auth/          # 인증 도메인 (controller/dto/service)
-│  │  │  ├─ user/          # 사용자 도메인 (controller/dto/service)
-│  │  │  ├─ domain/        # JPA 엔티티
-│  │  │  │  ├─ common/
-│  │  │  │  ├─ user/
-│  │  │  │  ├─ school/
-│  │  │  │  └─ chat/
-│  │  │  ├─ repository/    # JPA Repository
-│  │  │  │  ├─ user/
-│  │  │  │  └─ school/
-│  │  │  ├─ global/        # 공통 설정/응답
-│  │  │  └─ health/        # 헬스체크
+│  │  │  ├─ admin/         # 관리자 인증 (controller/dto/service)
+│  │  │  ├─ auth/          # 인증 (controller/dto/service)
+│  │  │  ├─ user/          # 사용자 (controller/dto/service/entity/repository)
+│  │  │  ├─ school/        # 학교/학급 (entity/repository)
+│  │  │  ├─ chat/          # 채팅 (entity)
+│  │  │  ├─ common/        # 공통 (api/config/entity)
+│  │  │  ├─ health/        # 헬스체크
 │  │  │  └─ BeApplication.java
 │  │  └─ resources/
 │  │     └─ application.yml
