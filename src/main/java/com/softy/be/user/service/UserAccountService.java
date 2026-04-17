@@ -1,5 +1,6 @@
 package com.softy.be.user.service;
 
+import com.softy.be.auth.service.KakaoOAuthClient;
 import com.softy.be.school.entity.ClassCode;
 import com.softy.be.school.entity.Classroom;
 import com.softy.be.school.entity.ParentStudent;
@@ -35,6 +36,8 @@ import java.util.Set;
 @RequiredArgsConstructor
 public class UserAccountService {
 
+    private static final String KAKAO_PROVIDER = "KAKAO";
+
     private final UserRepository userRepository;
     private final SocialAccountRepository socialAccountRepository;
     private final ClassroomRepository classroomRepository;
@@ -43,6 +46,7 @@ public class UserAccountService {
     private final ClassCodeRepository classCodeRepository;
     private final TeacherSettingRepository teacherSettingRepository;
     private final ClassCodeService classCodeService;
+    private final KakaoOAuthClient kakaoOAuthClient;
 
     @Transactional(readOnly = true)
     public UserMeResult getMe(Long userId) {
@@ -78,8 +82,23 @@ public class UserAccountService {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "이미 탈퇴한 계정입니다");
         }
 
+        socialAccountRepository.findFirstByUserIdAndProviderOrderByIdDesc(userId, KAKAO_PROVIDER)
+                .ifPresent(socialAccount -> unlinkKakaoOrThrow(socialAccount.getProviderUserId()));
+
         socialAccountRepository.deleteAllByUserId(userId);
         user.withdraw();
+    }
+
+    private void unlinkKakaoOrThrow(String providerUserId) {
+        try {
+            kakaoOAuthClient.unlinkUserByAdminKey(providerUserId);
+        } catch (Exception e) {
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_GATEWAY,
+                    "카카오 연결 해제에 실패하여 회원 탈퇴를 중단했습니다.",
+                    e
+            );
+        }
     }
 
     @Transactional
