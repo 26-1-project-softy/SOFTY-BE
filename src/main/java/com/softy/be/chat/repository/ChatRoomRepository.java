@@ -72,4 +72,17 @@ public interface ChatRoomRepository extends JpaRepository<ChatRoom, Long> {
     )
     Page<ReportChatRoomRow> findReportChatRoomsByTeacherId(@Param("teacherId") Long teacherId, Pageable pageable);
 
+    @Query(
+            value = """
+                    SELECT pu.name
+                    FROM chat_room_user_map crm
+                    JOIN users pu ON pu.id = crm.user_id
+                    WHERE crm.chat_room_id = :chatRoomId
+                      AND UPPER(pu.role) = 'PARENT'
+                    ORDER BY crm.id DESC
+                    LIMIT 1
+                    """,
+            nativeQuery = true
+    )
+    String findParentNameByChatRoomId(@Param("chatRoomId") Long chatRoomId);
 }
