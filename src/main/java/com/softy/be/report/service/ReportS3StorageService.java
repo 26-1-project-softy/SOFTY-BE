@@ -4,16 +4,19 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
+import software.amazon.awssdk.awscore.exception.AwsServiceException;
 import software.amazon.awssdk.core.sync.RequestBody;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.GetObjectRequest;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 import software.amazon.awssdk.services.s3.presigner.S3Presigner;
 import software.amazon.awssdk.services.s3.presigner.model.GetObjectPresignRequest;
+import lombok.extern.slf4j.Slf4j;
 
 import java.time.Duration;
 
 @Service
+@Slf4j
 public class ReportS3StorageService {
 
     private final S3Client s3Client;
@@ -47,6 +50,7 @@ public class ReportS3StorageService {
             s3Client.putObject(request, RequestBody.fromBytes(bytes));
             return toS3Uri(key);
         } catch (Exception e) {
+            logAwsFailure("S3 업로드 실패", key, e);
             throw new ResponseStatusException(HttpStatus.BAD_GATEWAY, "S3 업로드에 실패했습니다.", e);
         }
     }
@@ -67,6 +71,7 @@ public class ReportS3StorageService {
 
             return s3Presigner.presignGetObject(presignRequest).url().toString();
         } catch (Exception e) {
+            logAwsFailure("S3 presigned URL 생성 실패", key, e);
             throw new ResponseStatusException(HttpStatus.BAD_GATEWAY, "다운로드 링크 생성에 실패했습니다.", e);
         }
     }
@@ -99,6 +104,24 @@ public class ReportS3StorageService {
         if (bucket == null || bucket.trim().isEmpty()) {
             throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "REPORT_PDF_S3_BUCKET 설정이 필요합니다.");
         }
+    }
+
+    private void logAwsFailure(String phase, String key, Exception e) {
+        if (e instanceof AwsServiceException awsEx) {
+            log.error(
+                    "{} bucket={} key={} status={} errorCode={} requestId={} message={}",
+                    phase,
+                    bucket,
+                    key,
+                    awsEx.statusCode(),
+                    awsEx.awsErrorDetails() == null ? "unknown" : awsEx.awsErrorDetails().errorCode(),
+                    awsEx.requestId(),
+                    awsEx.getMessage(),
+                    e
+            );
+            return;
+        }
+        log.error("{} bucket={} key={} message={}", phase, bucket, key, e.getMessage(), e);
     }
 }
 

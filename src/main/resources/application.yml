@@ -16,6 +16,15 @@ spring:
   jackson:
     time-zone: Asia/Seoul
 
+server:
+  tomcat:
+    accesslog:
+      enabled: true
+      directory: ${LOG_PATH:/app/logs}
+      prefix: access
+      suffix: .log
+      pattern: '%h %l %u %t "%r" %s %b %D'
+
 oauth:
   kakao:
     user-info-uri: https://kapi.kakao.com/v2/user/me
