@@ -50,6 +50,16 @@ jobs:
               exit 1
             fi
 
+            set -a
+            . /home/ubuntu/softy/.env
+            set +a
+
+            if [ -z "${SWAGGER_SERVER_URL:-}" ]; then
+              echo "Missing SWAGGER_SERVER_URL in /home/ubuntu/softy/.env"
+              exit 1
+            fi
+            HEALTHCHECK_BASE_URL="${SWAGGER_SERVER_URL%/}"
+
             ACTIVE_PORT=$(grep -Eo 'set \$upstream_app http://127\.0\.0\.1:(8081|8082);' "$NGINX_CONF" | grep -Eo '(8081|8082)' | head -n1 || true)
             if [ "$ACTIVE_PORT" = "8081" ]; then
               TARGET_PORT=8082
@@ -101,7 +111,7 @@ jobs:
             sudo systemctl reload nginx
 
             for i in {1..10}; do
-              if curl -fsS "https://softy2.duckdns.org/health" >/dev/null; then
+              if curl -fsS "${HEALTHCHECK_BASE_URL}/health" >/dev/null; then
                 echo "Post-switch health check success"
                 docker rm -f "$OLD_CONTAINER" || true
                 echo "Blue-green redeploy success: switched to ${TARGET_SLOT}(${TARGET_PORT})"
