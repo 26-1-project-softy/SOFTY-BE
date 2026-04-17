@@ -113,7 +113,7 @@ public class ReportPdfRenderService {
         try {
             stream.showText(text);
         } catch (IllegalArgumentException e) {
-            stream.showText(text.replaceAll("[^\\x20-\\x7E]", "?"));
+            stream.showText(toAsciiFallback(text));
         }
         stream.endText();
         return y - LINE_HEIGHT;
@@ -128,7 +128,7 @@ public class ReportPdfRenderService {
         StringBuilder current = new StringBuilder();
         for (char ch : text.toCharArray()) {
             String next = current.toString() + ch;
-            float width = (font.getStringWidth(next) / 1000f) * fontSize;
+            float width = safeTextWidth(font, fontSize, next);
             if (width > maxWidth && current.length() > 0) {
                 lines.add(current.toString());
                 current = new StringBuilder().append(ch);
@@ -138,6 +138,19 @@ public class ReportPdfRenderService {
         }
         lines.add(current.toString());
         return lines;
+    }
+
+    private float safeTextWidth(PDFont font, float fontSize, String text) throws IOException {
+        try {
+            return (font.getStringWidth(text) / 1000f) * fontSize;
+        } catch (IllegalArgumentException e) {
+            String fallback = toAsciiFallback(text);
+            return (font.getStringWidth(fallback) / 1000f) * fontSize;
+        }
+    }
+
+    private String toAsciiFallback(String value) {
+        return value == null ? "" : value.replaceAll("[^\\x20-\\x7E]", "?");
     }
 
     private PDFont loadFont(PDDocument document) throws IOException {
