@@ -64,4 +64,9 @@ public class User extends BaseEntity {
         this.pw = null;
         this.role = "WITHDRAWN";
     }
+
+    public void applyDevLoginProfile(String name, String role) {
+        this.name = name;
+        this.role = role;
+    }
 }
