@@ -19,6 +19,8 @@ spring:
 oauth:
   kakao:
     user-info-uri: https://kapi.kakao.com/v2/user/me
+    unlink-uri: https://kapi.kakao.com/v1/user/unlink
+    admin-key: ${KAKAO_ADMIN_KEY:}
 
 jwt:
   secret: ${JWT_SECRET}
@@ -31,6 +33,15 @@ admin:
 swagger:
   server-url: ${SWAGGER_SERVER_URL:}
   local-server-url: ${SWAGGER_LOCAL_SERVER_URL:}
+
+report:
+  pdf:
+    s3:
+      region: ${REPORT_PDF_S3_REGION:ap-northeast-2}
+      bucket: ${REPORT_PDF_S3_BUCKET:}
+      key-prefix: ${REPORT_PDF_S3_KEY_PREFIX:reports}
+      presigned-expire-seconds: ${REPORT_PDF_PRESIGNED_EXPIRE_SECONDS:600}
+    font-path: ${REPORT_PDF_FONT_PATH:}
 
 management:
   endpoints:
