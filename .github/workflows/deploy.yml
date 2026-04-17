@@ -83,7 +83,7 @@ jobs:
           GHCR_USERNAME: ${{ secrets.GHCR_USERNAME }}
           GHCR_TOKEN: ${{ secrets.GHCR_TOKEN }}
         with:
-          host: softy2.duckdns.org
+          host: ${{ secrets.DEPLOY_HOST }}
           username: ubuntu
           port: 22
           key: ${{ secrets.SSH_PRIVATE_KEY }}
