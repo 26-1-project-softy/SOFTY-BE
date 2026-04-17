@@ -20,7 +20,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
-import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.UUID;
 
@@ -30,6 +31,7 @@ public class ReportService {
 
     private static final String ROLE_TEACHER = "TEACHER";
     private static final int MAX_PAGE_SIZE = 100;
+    private static final DateTimeFormatter FILE_TIME_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd_HHmmss");
 
     private final UserRepository userRepository;
     private final ChatRoomRepository chatRoomRepository;
@@ -92,7 +94,9 @@ public class ReportService {
         List<Message> messages = messageRepository.findAllByChatRoomIdForReport(chatRoomId);
         byte[] pdfBytes = reportPdfRenderService.render(chatRoomId, chatRoom.getIntentLabel(), messages);
 
-        String displayFileName = "증빙리포트_" + LocalDate.now() + ".pdf";
+        String parentName = safeParentName(chatRoomRepository.findParentNameByChatRoomId(chatRoomId));
+        String timestamp = LocalDateTime.now().format(FILE_TIME_FORMATTER);
+        String displayFileName = "증빙리포트_" + parentName + "_" + timestamp + ".pdf";
         String objectFileName = "report-" + UUID.randomUUID() + ".pdf";
         String objectKey = reportS3StorageService.buildObjectKey(chatRoomId, objectFileName);
         String s3Uri = reportS3StorageService.uploadPdf(objectKey, pdfBytes);
@@ -110,5 +114,14 @@ public class ReportService {
 
     private String nullToEmpty(String value) {
         return value == null ? "" : value;
+    }
+
+    private String safeParentName(String parentName) {
+        String fallback = "학부모";
+        if (parentName == null || parentName.isBlank()) {
+            return fallback;
+        }
+        String sanitized = parentName.trim().replaceAll("[\\\\/:*?\"<>|]", "_");
+        return sanitized.isBlank() ? fallback : sanitized;
     }
 }

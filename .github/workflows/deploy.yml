@@ -4,7 +4,6 @@ on:
   push:
     branches:
       - main
-      - fix/pdf-stability-debug-logging
   workflow_dispatch:
 
 env:
