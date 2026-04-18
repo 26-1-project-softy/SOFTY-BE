@@ -1,7 +1,9 @@
 package com.softy.be.admin.service;
 
 import com.softy.be.admin.dto.AdminPdfStatisticsData;
+import com.softy.be.admin.dto.AdminRiskStatisticsData;
 import com.softy.be.admin.dto.AdminTeacherPdfCountData;
+import com.softy.be.chat.repository.MessageRepository;
 import com.softy.be.report.repository.PdfFileRepository;
 import com.softy.be.report.repository.TeacherPdfCountRow;
 import com.softy.be.user.entity.User;
@@ -22,6 +24,7 @@ public class AdminStatisticsService {
 
     private final UserRepository userRepository;
     private final PdfFileRepository pdfFileRepository;
+    private final MessageRepository messageRepository;
 
     @Transactional(readOnly = true)
     public AdminPdfStatisticsData getPdfStatistics(Long authenticatedUserId) {
@@ -34,6 +37,21 @@ public class AdminStatisticsService {
                 .toList();
 
         return new AdminPdfStatisticsData(totalPdfCount, list);
+    }
+
+    @Transactional(readOnly = true)
+    public AdminRiskStatisticsData getRiskStatistics(Long authenticatedUserId) {
+        validateAdminOrThrow(authenticatedUserId);
+
+        long totalMessageCount = messageRepository.countTeacherMessages();
+        long detectedConflictCount = messageRepository.countTeacherDisputeRiskMessages();
+        double conflictDetectionRate = calculateDetectionRate(totalMessageCount, detectedConflictCount);
+
+        return new AdminRiskStatisticsData(
+                totalMessageCount,
+                detectedConflictCount,
+                conflictDetectionRate
+        );
     }
 
     private void validateAdminOrThrow(Long authenticatedUserId) {
@@ -53,5 +71,13 @@ public class AdminStatisticsService {
                 row.getTeacherName(),
                 pdfCount
         );
+    }
+
+    private double calculateDetectionRate(long totalMessageCount, long detectedConflictCount) {
+        if (totalMessageCount <= 0) {
+            return 0.0;
+        }
+        double rawRate = (detectedConflictCount * 100.0) / totalMessageCount;
+        return Math.round(rawRate * 100.0) / 100.0;
     }
 }
