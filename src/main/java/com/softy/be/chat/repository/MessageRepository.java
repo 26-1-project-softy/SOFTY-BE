@@ -34,5 +34,6 @@ public interface MessageRepository extends JpaRepository<Message, Long> {
               AND m.isDisputeRisk = true
             """)
     long countTeacherDisputeRiskMessages();
+
 }
 

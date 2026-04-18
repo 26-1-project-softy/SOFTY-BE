@@ -1,6 +1,7 @@
 package com.softy.be.admin.controller;
 
 import com.softy.be.admin.dto.AdminPdfStatisticsData;
+import com.softy.be.admin.dto.AdminRecommendationAdoptionData;
 import com.softy.be.admin.dto.AdminRiskStatisticsData;
 import com.softy.be.admin.service.AdminStatisticsService;
 import com.softy.be.auth.service.TokenAuthService;
@@ -48,6 +49,22 @@ public class AdminStatisticsController {
                 true,
                 200,
                 "리스크 건수 조회에 성공했습니다.",
+                data
+        );
+        return ResponseEntity.ok(response);
+    }
+
+    @GetMapping("/recommendation-adoption")
+    public ResponseEntity<ApiResponse<AdminRecommendationAdoptionData>> getRecommendationAdoptionStatistics(
+            @RequestHeader(value = HttpHeaders.AUTHORIZATION, required = false) String authorization
+    ) {
+        Long userId = tokenAuthService.extractUserIdFromAuthorization(authorization);
+        AdminRecommendationAdoptionData data = adminStatisticsService.getRecommendationAdoptionStatistics(userId);
+
+        ApiResponse<AdminRecommendationAdoptionData> response = ApiResponse.of(
+                true,
+                200,
+                "채택률 조회에 성공했습니다.",
                 data
         );
         return ResponseEntity.ok(response);

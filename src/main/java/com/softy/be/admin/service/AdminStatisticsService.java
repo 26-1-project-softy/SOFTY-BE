@@ -1,8 +1,10 @@
 package com.softy.be.admin.service;
 
 import com.softy.be.admin.dto.AdminPdfStatisticsData;
+import com.softy.be.admin.dto.AdminRecommendationAdoptionData;
 import com.softy.be.admin.dto.AdminRiskStatisticsData;
 import com.softy.be.admin.dto.AdminTeacherPdfCountData;
+import com.softy.be.chat.repository.AiRecommendationRepository;
 import com.softy.be.chat.repository.MessageRepository;
 import com.softy.be.report.repository.PdfFileRepository;
 import com.softy.be.report.repository.TeacherPdfCountRow;
@@ -21,10 +23,12 @@ import java.util.List;
 public class AdminStatisticsService {
 
     private static final String ADMIN_ROLE = "ADMIN";
+    private static final double USED_AS_IS_THRESHOLD = 0.99;
 
     private final UserRepository userRepository;
     private final PdfFileRepository pdfFileRepository;
     private final MessageRepository messageRepository;
+    private final AiRecommendationRepository aiRecommendationRepository;
 
     @Transactional(readOnly = true)
     public AdminPdfStatisticsData getPdfStatistics(Long authenticatedUserId) {
@@ -54,6 +58,19 @@ public class AdminStatisticsService {
         );
     }
 
+    @Transactional(readOnly = true)
+    public AdminRecommendationAdoptionData getRecommendationAdoptionStatistics(Long authenticatedUserId) {
+        validateAdminOrThrow(authenticatedUserId);
+
+        long totalRecommendationCount = aiRecommendationRepository.countTeacherRecommendations();
+        long totalUsedAsIs = aiRecommendationRepository.countTeacherRecommendationsUsedAsIs(USED_AS_IS_THRESHOLD);
+        long totalModified = aiRecommendationRepository.countTeacherRecommendationsModified(USED_AS_IS_THRESHOLD);
+        long totalNotUsed = aiRecommendationRepository.countTeacherRecommendationsNotUsed();
+
+        double adoptionRate = calculateAdoptionRate(totalRecommendationCount, totalUsedAsIs, totalModified);
+        return new AdminRecommendationAdoptionData(adoptionRate, totalUsedAsIs, totalModified, totalNotUsed);
+    }
+
     private void validateAdminOrThrow(Long authenticatedUserId) {
         User user = userRepository.findById(authenticatedUserId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "사용자를 찾을 수 없습니다."));
@@ -78,6 +95,14 @@ public class AdminStatisticsService {
             return 0.0;
         }
         double rawRate = (detectedConflictCount * 100.0) / totalMessageCount;
+        return Math.round(rawRate * 100.0) / 100.0;
+    }
+
+    private double calculateAdoptionRate(long totalRecommendationCount, long totalUsedAsIs, long totalModified) {
+        if (totalRecommendationCount <= 0) {
+            return 0.0;
+        }
+        double rawRate = ((totalUsedAsIs + totalModified) * 100.0) / totalRecommendationCount;
         return Math.round(rawRate * 100.0) / 100.0;
     }
 }
