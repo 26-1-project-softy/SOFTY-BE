@@ -60,6 +60,19 @@ public class AuthService {
     }
 
     @Transactional
+    public KakaoLoginResult loginWithKakaoAuthorizationCode(String code, String redirectUri) {
+        if (isBlank(code)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "kakao authorization code is required.");
+        }
+        if (isBlank(redirectUri)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "redirectUri is required.");
+        }
+
+        String kakaoAccessToken = kakaoOAuthClient.exchangeCodeForAccessToken(code.trim(), redirectUri.trim());
+        return loginWithKakaoAccessToken(kakaoAccessToken);
+    }
+
+    @Transactional
     public KakaoLoginResult loginForDev(String socialId, String role, String nickname) {
         if (isBlank(socialId)) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "socialId is required.");

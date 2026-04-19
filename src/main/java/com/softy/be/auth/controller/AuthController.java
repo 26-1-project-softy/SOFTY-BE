@@ -1,6 +1,7 @@
 package com.softy.be.auth.controller;
 
 import com.softy.be.auth.dto.ClassCodeData;
+import com.softy.be.auth.dto.KakaoCodeLoginRequest;
 import com.softy.be.auth.dto.KakaoLoginData;
 import com.softy.be.auth.dto.KakaoLoginRequest;
 import com.softy.be.auth.dto.ParentSignupRequest;
@@ -41,6 +42,22 @@ public class AuthController {
                 true,
                 201,
                 "로그인에 성공 하였습니다.",
+                new KakaoLoginData(result.accessToken(), result.refreshToken(), result.registrationRequired())
+        );
+        return ResponseEntity.status(HttpStatus.CREATED).body(response);
+    }
+
+    @PostMapping("/teachers/kakao/login")
+    public ResponseEntity<ApiResponse<KakaoLoginData>> kakaoWebLogin(@RequestBody KakaoCodeLoginRequest request) {
+        KakaoLoginResult result = authService.loginWithKakaoAuthorizationCode(
+                request == null ? null : request.authorizationCode(),
+                request == null ? null : request.redirectUri()
+        );
+
+        ApiResponse<KakaoLoginData> response = ApiResponse.of(
+                true,
+                201,
+                "로그인에 성공했습니다.",
                 new KakaoLoginData(result.accessToken(), result.refreshToken(), result.registrationRequired())
         );
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
