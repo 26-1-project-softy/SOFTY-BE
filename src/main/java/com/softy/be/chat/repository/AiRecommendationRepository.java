@@ -5,6 +5,8 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import java.util.List;
+
 public interface AiRecommendationRepository extends JpaRepository<AiRecommendation, Long> {
 
     @Query("""
@@ -47,5 +49,27 @@ public interface AiRecommendationRepository extends JpaRepository<AiRecommendati
               AND (ar.isRecommendationUsed IS NULL OR ar.isRecommendationUsed = false)
             """)
     long countTeacherRecommendationsNotUsed();
+
+    @Query(value = """
+            SELECT
+                ar.id AS recommendationId,
+                ar.content AS recommendationContent,
+                m.id AS messageId,
+                m.content AS messageContent,
+                m.modify_content AS messageModifyContent
+            FROM ai_recommendation ar
+            JOIN message m ON m.id = ar.message_id
+            JOIN "user" u ON u.id = m.sender_id
+            WHERE UPPER(u.role) = 'TEACHER'
+              AND (
+                    ar.embedding IS NULL
+                    OR m.content_embedding IS NULL
+                    OR (m.modify_content IS NOT NULL AND m.modify_content_embedding IS NULL)
+                    OR m.similarity_original IS NULL
+                    OR (m.modify_content IS NOT NULL AND m.similarity_modified IS NULL)
+              )
+            ORDER BY ar.id
+            """, nativeQuery = true)
+    List<EmbeddingCandidateRow> findTeacherEmbeddingCandidates();
 }
 
