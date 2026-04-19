@@ -37,6 +37,10 @@ public interface AiRecommendationRepository extends JpaRepository<AiRecommendati
             JOIN m.sender s
             WHERE UPPER(s.role) = 'TEACHER'
               AND ar.content IS NOT NULL
+              AND NOT (
+                    m.modifyContent IS NOT NULL
+                    AND m.modifyContent = ar.content
+              )
               AND m.similarityModified IS NOT NULL
               AND m.similarityOriginal IS NOT NULL
               AND m.similarityModified > m.similarityOriginal
