@@ -42,6 +42,16 @@ jwt:
 admin:
   provision-key: ${ADMIN_PROVISION_KEY}
 
+openai:
+  api-key: ${OPENAI_API_KEY:}
+  embedding-model: ${OPENAI_EMBEDDING_MODEL:text-embedding-3-small}
+  embedding-url: ${OPENAI_EMBEDDING_URL:https://api.openai.com/v1/embeddings}
+
+embedding:
+  schedule:
+    cron: ${EMBEDDING_SCHEDULE_CRON:0 0 3 * * SUN}
+    zone: ${EMBEDDING_SCHEDULE_ZONE:Asia/Seoul}
+
 swagger:
   server-url: ${SWAGGER_SERVER_URL:}
   local-server-url: ${SWAGGER_LOCAL_SERVER_URL:}

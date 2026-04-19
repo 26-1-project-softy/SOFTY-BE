@@ -45,7 +45,7 @@ public class AuthController {
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
-    @PostMapping("/teachers/kakao/login")
+    @PostMapping("/kakao/login/teacher")
     public ResponseEntity<ApiResponse<KakaoLoginData>> kakaoWebLogin(@RequestBody KakaoCodeLoginRequest request) {
         KakaoLoginResult result = authService.loginWithKakaoAuthorizationCode(
                 request == null ? null : request.authorizationCode(),

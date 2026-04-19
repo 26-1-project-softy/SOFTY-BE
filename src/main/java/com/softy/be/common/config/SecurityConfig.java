@@ -34,7 +34,7 @@ public class SecurityConfig {
                                 "/swagger-ui.html",
                                 "/actuator/health"
                         ).permitAll()
-                        .requestMatchers("/admin/auth/**").permitAll()
+                        .requestMatchers("/auth/admin/**").permitAll()
                         .requestMatchers("/auth/kakao/login/**").permitAll()
                         .requestMatchers("/auth/dev-login").permitAll()
                         .requestMatchers("/admin/**").hasRole("ADMIN")
