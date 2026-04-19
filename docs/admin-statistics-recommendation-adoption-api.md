@@ -33,26 +33,25 @@
 
 ### 필드 설명
 - `data.adoptionRate`: 추천문장 채택률(0~100, 소수점 둘째 자리 반올림)
-- `data.totalUsedAsIs`: 추천문장을 그대로 사용한 건수
-- `data.totalModified`: 추천문장을 일부 수정 후 사용한 건수
-- `data.totalNotUsed`: 추천문장을 사용하지 않은 건수
+- `data.totalUsedAsIs`: 추천문장과 수정문장이 완전히 일치한 건수
+- `data.totalModified`: 추천문장 방향으로 일부 수정한 건수
+- `data.totalNotUsed`: 추천문장을 사실상 사용하지 않은 건수
 
 ## 집계 기준
-- 집계 대상: `ai_recommendation`과 연결된 교사(`message.sender.role = TEACHER`) 메시지
-- 그대로 사용:
-  - `is_recommendation_used = true`
-  - `similarity_modified >= 0.99`
-- 일부 수정 후 사용:
-  - `is_recommendation_used = true`
-  - `similarity_modified < 0.99` 또는 `similarity_modified IS NULL`
-- 미사용:
-  - `is_recommendation_used = false` 또는 `NULL`
-- 채택률:
+- 집계 대상: `ai_recommendation`과 연결된 교사 메시지(`message.sender.role = TEACHER`)
+- `totalUsedAsIs`
+  - `message.modify_content IS NOT NULL`
+  - `message.modify_content = ai_recommendation.content`
+- `totalModified`
+  - `message.similarity_modified IS NOT NULL`
+  - `message.similarity_original IS NOT NULL`
+  - `message.similarity_modified > message.similarity_original`
+- `totalNotUsed`
+  - 위 `totalUsedAsIs`, `totalModified` 조건에 해당하지 않는 나머지
+- `adoptionRate`
   - `(totalUsedAsIs + totalModified) / totalRecommendationCount * 100`
   - `totalRecommendationCount = 0`이면 `0.0`
 
 ## 오류 응답
 - `401 Unauthorized`: Authorization 헤더 누락/토큰 오류
 - `403 Forbidden`: 관리자 권한 아님
-- `404 Not Found`: 토큰의 사용자 ID에 해당하는 사용자 없음
-
