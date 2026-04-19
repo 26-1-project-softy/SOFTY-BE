@@ -1,13 +1,13 @@
-package com.softy.be.admin.controller;
+package com.softy.be.auth.controller;
 
 import com.softy.be.admin.dto.AdminLoginData;
 import com.softy.be.admin.dto.AdminLoginRequest;
 import com.softy.be.admin.dto.AdminRegisterData;
 import com.softy.be.admin.dto.AdminRegisterRequest;
-import com.softy.be.common.api.ApiResponse;
 import com.softy.be.admin.service.AdminAuthService;
 import com.softy.be.admin.service.AdminLoginResult;
 import com.softy.be.admin.service.AdminRegisterResult;
+import com.softy.be.common.api.ApiResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -18,7 +18,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
-@RequestMapping("/admin/auth")
+@RequestMapping("/auth/admin")
 @RequiredArgsConstructor
 public class AdminAuthController {
 
