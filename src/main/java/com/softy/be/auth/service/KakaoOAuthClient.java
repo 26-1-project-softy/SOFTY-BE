@@ -16,18 +16,61 @@ import org.springframework.web.client.RestTemplate;
 public class KakaoOAuthClient {
 
     private final RestTemplate restTemplate = new RestTemplate();
+    private final String tokenUri;
     private final String userInfoUri;
     private final String unlinkUri;
+    private final String clientId;
+    private final String clientSecret;
     private final String adminKey;
 
     public KakaoOAuthClient(
+            @Value("${oauth.kakao.token-uri:https://kauth.kakao.com/oauth/token}") String tokenUri,
             @Value("${oauth.kakao.user-info-uri:https://kapi.kakao.com/v2/user/me}") String userInfoUri,
             @Value("${oauth.kakao.unlink-uri:https://kapi.kakao.com/v1/user/unlink}") String unlinkUri,
+            @Value("${oauth.kakao.client-id:}") String clientId,
+            @Value("${oauth.kakao.client-secret:}") String clientSecret,
             @Value("${oauth.kakao.admin-key:}") String adminKey
     ) {
+        this.tokenUri = tokenUri;
         this.userInfoUri = userInfoUri;
         this.unlinkUri = unlinkUri;
+        this.clientId = clientId;
+        this.clientSecret = clientSecret;
         this.adminKey = adminKey;
+    }
+
+    public String exchangeCodeForAccessToken(String code, String redirectUri) {
+        if (code == null || code.trim().isEmpty()) {
+            throw new IllegalArgumentException("kakao authorization code is empty.");
+        }
+        if (redirectUri == null || redirectUri.trim().isEmpty()) {
+            throw new IllegalArgumentException("kakao redirectUri is empty.");
+        }
+        if (clientId == null || clientId.trim().isEmpty()) {
+            throw new IllegalStateException("kakao client id is not configured.");
+        }
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_FORM_URLENCODED);
+
+        MultiValueMap<String, String> body = new LinkedMultiValueMap<>();
+        body.add("grant_type", "authorization_code");
+        body.add("client_id", clientId.trim());
+        body.add("redirect_uri", redirectUri.trim());
+        body.add("code", code.trim());
+
+        if (clientSecret != null && !clientSecret.trim().isEmpty()) {
+            body.add("client_secret", clientSecret.trim());
+        }
+
+        HttpEntity<MultiValueMap<String, String>> requestEntity = new HttpEntity<>(body, headers);
+        ResponseEntity<JsonNode> response = restTemplate.exchange(tokenUri, HttpMethod.POST, requestEntity, JsonNode.class);
+
+        JsonNode responseBody = response.getBody();
+        if (responseBody == null || responseBody.path("access_token").isMissingNode()) {
+            throw new IllegalStateException("failed to exchange kakao authorization code.");
+        }
+        return responseBody.path("access_token").asText();
     }
 
     public KakaoUserProfile getUserProfile(String accessToken) {
