@@ -7,6 +7,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
+import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.List;
@@ -17,6 +18,8 @@ import java.util.concurrent.atomic.AtomicBoolean;
 @Service
 @RequiredArgsConstructor
 public class AdminEmbeddingService {
+
+    private static final int PROGRESS_LOG_STEP = 10;
 
     private final AiRecommendationRepository aiRecommendationRepository;
     private final OpenAiEmbeddingClient openAiEmbeddingClient;
@@ -43,15 +46,19 @@ public class AdminEmbeddingService {
         int successCount = 0;
         int failedCount = 0;
         int skippedCount = 0;
+        int processedCount = 0;
 
         try {
             List<EmbeddingCandidateRow> candidates = aiRecommendationRepository.findTeacherEmbeddingCandidates();
             Map<String, List<Double>> embeddingCache = new HashMap<>();
+            log.info("Embedding job started. trigger={}, totalCandidates={}", trigger, candidates.size());
 
             for (EmbeddingCandidateRow candidate : candidates) {
+                processedCount++;
                 try {
                     if (!hasText(candidate.getRecommendationContent()) || !hasText(candidate.getMessageContent())) {
                         skippedCount++;
+                        logProgress(trigger, processedCount, candidates.size(), successCount, failedCount, skippedCount, embeddingCache.size());
                         continue;
                     }
 
@@ -76,16 +83,30 @@ public class AdminEmbeddingService {
                             similarityModified
                     );
                     successCount++;
+                    logProgress(trigger, processedCount, candidates.size(), successCount, failedCount, skippedCount, embeddingCache.size());
                 } catch (Exception e) {
                     failedCount++;
                     log.warn(
-                            "Embedding row failed. recommendationId={}, messageId={}",
+                            "Embedding row failed. trigger={}, recommendationId={}, messageId={}",
+                            trigger,
                             candidate.getRecommendationId(),
                             candidate.getMessageId(),
                             e
                     );
+                    logProgress(trigger, processedCount, candidates.size(), successCount, failedCount, skippedCount, embeddingCache.size());
                 }
             }
+
+            LocalDateTime finishedAt = LocalDateTime.now();
+            log.info(
+                    "Embedding job finished. trigger={}, totalCandidates={}, successCount={}, failedCount={}, skippedCount={}, durationSeconds={}",
+                    trigger,
+                    candidates.size(),
+                    successCount,
+                    failedCount,
+                    skippedCount,
+                    Duration.between(startedAt, finishedAt).toSeconds()
+            );
 
             return new AdminEmbeddingRunData(
                     trigger,
@@ -94,11 +115,35 @@ public class AdminEmbeddingService {
                     failedCount,
                     skippedCount,
                     startedAt,
-                    LocalDateTime.now()
+                    finishedAt
             );
         } finally {
             running.set(false);
         }
+    }
+
+    private void logProgress(
+            String trigger,
+            int processedCount,
+            int totalCandidates,
+            int successCount,
+            int failedCount,
+            int skippedCount,
+            int cacheSize
+    ) {
+        if (processedCount % PROGRESS_LOG_STEP != 0 && processedCount != totalCandidates) {
+            return;
+        }
+        log.info(
+                "Embedding progress. trigger={}, processed={}/{}, successCount={}, failedCount={}, skippedCount={}, cacheSize={}",
+                trigger,
+                processedCount,
+                totalCandidates,
+                successCount,
+                failedCount,
+                skippedCount,
+                cacheSize
+        );
     }
 
     private List<Double> getOrCreateEmbedding(String text, Map<String, List<Double>> embeddingCache) {

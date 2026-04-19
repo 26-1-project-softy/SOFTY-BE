@@ -59,7 +59,7 @@ public interface AiRecommendationRepository extends JpaRepository<AiRecommendati
                 m.modify_content AS messageModifyContent
             FROM ai_recommendation ar
             JOIN message m ON m.id = ar.message_id
-            JOIN "user" u ON u.id = m.sender_id
+            JOIN users u ON u.id = m.sender_id
             WHERE UPPER(u.role) = 'TEACHER'
               AND (
                     ar.embedding IS NULL

@@ -33,13 +33,30 @@ public class EmbeddingUpdateRepository {
             Double similarityOriginal,
             Double similarityModified
     ) {
-        String sql = """
+        if (modifyEmbeddingVector == null) {
+            String sqlWithoutModifyEmbedding = """
+                    UPDATE message
+                    SET content_embedding = CAST(:contentEmbedding AS vector),
+                        similarity_original = :similarityOriginal,
+                        similarity_modified = :similarityModified,
+                        updated_at = CURRENT_TIMESTAMP
+                    WHERE id = :id
+                    """;
+
+            MapSqlParameterSource params = new MapSqlParameterSource()
+                    .addValue("id", messageId)
+                    .addValue("contentEmbedding", contentEmbeddingVector)
+                    .addValue("similarityOriginal", similarityOriginal)
+                    .addValue("similarityModified", similarityModified);
+
+            jdbcTemplate.update(sqlWithoutModifyEmbedding, params);
+            return;
+        }
+
+        String sqlWithModifyEmbedding = """
                 UPDATE message
                 SET content_embedding = CAST(:contentEmbedding AS vector),
-                    modify_content_embedding = CASE
-                        WHEN :modifyEmbedding IS NULL THEN modify_content_embedding
-                        ELSE CAST(:modifyEmbedding AS vector)
-                    END,
+                    modify_content_embedding = CAST(:modifyEmbedding AS vector),
                     similarity_original = :similarityOriginal,
                     similarity_modified = :similarityModified,
                     updated_at = CURRENT_TIMESTAMP
@@ -53,6 +70,6 @@ public class EmbeddingUpdateRepository {
                 .addValue("similarityOriginal", similarityOriginal)
                 .addValue("similarityModified", similarityModified);
 
-        jdbcTemplate.update(sql, params);
+        jdbcTemplate.update(sqlWithModifyEmbedding, params);
     }
 }
