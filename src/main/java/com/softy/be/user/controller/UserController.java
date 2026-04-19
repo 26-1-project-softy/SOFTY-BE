@@ -1,16 +1,15 @@
 package com.softy.be.user.controller;
 
-import com.softy.be.auth.service.TokenAuthService;
+import com.softy.be.auth.security.AuthenticatedUserPrincipal;
 import com.softy.be.common.api.ApiResponse;
 import com.softy.be.user.dto.UserMeData;
 import com.softy.be.user.service.UserAccountService;
 import com.softy.be.user.service.UserMeResult;
 import lombok.RequiredArgsConstructor;
-import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -19,14 +18,13 @@ import org.springframework.web.bind.annotation.RestController;
 @RequiredArgsConstructor
 public class UserController {
 
-    private final TokenAuthService tokenAuthService;
     private final UserAccountService userAccountService;
 
     @GetMapping("/me")
     public ResponseEntity<ApiResponse<UserMeData>> me(
-            @RequestHeader(value = HttpHeaders.AUTHORIZATION, required = false) String authorization
+            @AuthenticationPrincipal AuthenticatedUserPrincipal principal
     ) {
-        Long userId = tokenAuthService.extractUserIdFromAuthorization(authorization);
+        Long userId = principal.userId();
         UserMeResult result = userAccountService.getMe(userId);
 
         ApiResponse<UserMeData> response = ApiResponse.of(
@@ -41,9 +39,9 @@ public class UserController {
 
     @DeleteMapping("/me")
     public ResponseEntity<ApiResponse<Object>> withdraw(
-            @RequestHeader(value = HttpHeaders.AUTHORIZATION, required = false) String authorization
+            @AuthenticationPrincipal AuthenticatedUserPrincipal principal
     ) {
-        Long userId = tokenAuthService.extractUserIdFromAuthorization(authorization);
+        Long userId = principal.userId();
         userAccountService.withdraw(userId);
 
         ApiResponse<Object> response = ApiResponse.of(

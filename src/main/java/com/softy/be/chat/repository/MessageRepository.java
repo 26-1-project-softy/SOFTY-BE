@@ -17,5 +17,23 @@ public interface MessageRepository extends JpaRepository<Message, Long> {
             ORDER BY m.createdAt ASC, m.id ASC
             """)
     List<Message> findAllByChatRoomIdForReport(@Param("chatRoomId") Long chatRoomId);
+
+    @Query("""
+            SELECT COUNT(m)
+            FROM Message m
+            JOIN m.sender s
+            WHERE UPPER(s.role) = 'TEACHER'
+            """)
+    long countTeacherMessages();
+
+    @Query("""
+            SELECT COUNT(m)
+            FROM Message m
+            JOIN m.sender s
+            WHERE UPPER(s.role) = 'TEACHER'
+              AND m.isDisputeRisk = true
+            """)
+    long countTeacherDisputeRiskMessages();
+
 }
 
