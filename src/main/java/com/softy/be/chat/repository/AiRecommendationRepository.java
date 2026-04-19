@@ -3,7 +3,6 @@ package com.softy.be.chat.repository;
 import com.softy.be.chat.entity.AiRecommendation;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
-import org.springframework.data.repository.query.Param;
 
 import java.util.List;
 
@@ -15,6 +14,7 @@ public interface AiRecommendationRepository extends JpaRepository<AiRecommendati
             JOIN ar.message m
             JOIN m.sender s
             WHERE UPPER(s.role) = 'TEACHER'
+              AND ar.content IS NOT NULL
             """)
     long countTeacherRecommendations();
 
@@ -24,10 +24,11 @@ public interface AiRecommendationRepository extends JpaRepository<AiRecommendati
             JOIN ar.message m
             JOIN m.sender s
             WHERE UPPER(s.role) = 'TEACHER'
-              AND ar.isRecommendationUsed = true
-              AND m.similarityModified >= :usedAsIsThreshold
+              AND ar.content IS NOT NULL
+              AND m.modifyContent IS NOT NULL
+              AND m.modifyContent = ar.content
             """)
-    long countTeacherRecommendationsUsedAsIs(@Param("usedAsIsThreshold") double usedAsIsThreshold);
+    long countTeacherRecommendationsUsedAsIs();
 
     @Query("""
             SELECT COUNT(ar)
@@ -35,10 +36,12 @@ public interface AiRecommendationRepository extends JpaRepository<AiRecommendati
             JOIN ar.message m
             JOIN m.sender s
             WHERE UPPER(s.role) = 'TEACHER'
-              AND ar.isRecommendationUsed = true
-              AND (m.similarityModified IS NULL OR m.similarityModified < :usedAsIsThreshold)
+              AND ar.content IS NOT NULL
+              AND m.similarityModified IS NOT NULL
+              AND m.similarityOriginal IS NOT NULL
+              AND m.similarityModified > m.similarityOriginal
             """)
-    long countTeacherRecommendationsModified(@Param("usedAsIsThreshold") double usedAsIsThreshold);
+    long countTeacherRecommendationsModified();
 
     @Query("""
             SELECT COUNT(ar)
@@ -46,7 +49,16 @@ public interface AiRecommendationRepository extends JpaRepository<AiRecommendati
             JOIN ar.message m
             JOIN m.sender s
             WHERE UPPER(s.role) = 'TEACHER'
-              AND (ar.isRecommendationUsed IS NULL OR ar.isRecommendationUsed = false)
+              AND ar.content IS NOT NULL
+              AND NOT (
+                    m.modifyContent IS NOT NULL
+                    AND m.modifyContent = ar.content
+              )
+              AND NOT (
+                    m.similarityModified IS NOT NULL
+                    AND m.similarityOriginal IS NOT NULL
+                    AND m.similarityModified > m.similarityOriginal
+              )
             """)
     long countTeacherRecommendationsNotUsed();
 

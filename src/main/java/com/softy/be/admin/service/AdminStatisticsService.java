@@ -18,8 +18,6 @@ import java.util.List;
 @RequiredArgsConstructor
 public class AdminStatisticsService {
 
-    private static final double USED_AS_IS_THRESHOLD = 0.99;
-
     private final PdfFileRepository pdfFileRepository;
     private final MessageRepository messageRepository;
     private final AiRecommendationRepository aiRecommendationRepository;
@@ -51,8 +49,8 @@ public class AdminStatisticsService {
     @Transactional(readOnly = true)
     public AdminRecommendationAdoptionData getRecommendationAdoptionStatistics() {
         long totalRecommendationCount = aiRecommendationRepository.countTeacherRecommendations();
-        long totalUsedAsIs = aiRecommendationRepository.countTeacherRecommendationsUsedAsIs(USED_AS_IS_THRESHOLD);
-        long totalModified = aiRecommendationRepository.countTeacherRecommendationsModified(USED_AS_IS_THRESHOLD);
+        long totalUsedAsIs = aiRecommendationRepository.countTeacherRecommendationsUsedAsIs();
+        long totalModified = aiRecommendationRepository.countTeacherRecommendationsModified();
         long totalNotUsed = aiRecommendationRepository.countTeacherRecommendationsNotUsed();
 
         double adoptionRate = calculateAdoptionRate(totalRecommendationCount, totalUsedAsIs, totalModified);
