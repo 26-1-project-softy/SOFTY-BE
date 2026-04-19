@@ -11,15 +11,14 @@ import com.softy.be.auth.service.ClassCodeCreateResult;
 import com.softy.be.auth.service.KakaoLoginResult;
 import com.softy.be.auth.service.ParentSignupResult;
 import com.softy.be.auth.service.TeacherSignupResult;
-import com.softy.be.auth.service.TokenAuthService;
+import com.softy.be.auth.security.AuthenticatedUserPrincipal;
 import com.softy.be.common.api.ApiResponse;
 import lombok.RequiredArgsConstructor;
-import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -29,7 +28,6 @@ import org.springframework.web.bind.annotation.RestController;
 public class AuthController {
 
     private final AuthService authService;
-    private final TokenAuthService tokenAuthService;
 
     @PostMapping("/kakao/login")
     public ResponseEntity<ApiResponse<KakaoLoginData>> kakaoLogin(@RequestBody KakaoLoginRequest request) {
@@ -48,10 +46,10 @@ public class AuthController {
 
     @PostMapping("/teachers/signup")
     public ResponseEntity<ApiResponse<SignupUserData>> signupTeacher(
-            @RequestHeader(value = HttpHeaders.AUTHORIZATION, required = false) String authorization,
+            @AuthenticationPrincipal AuthenticatedUserPrincipal principal,
             @RequestBody TeacherSignupRequest request
     ) {
-        Long userId = tokenAuthService.extractUserIdFromAuthorization(authorization);
+        Long userId = principal.userId();
         TeacherSignupResult result = authService.signupTeacher(userId, request);
 
         ApiResponse<SignupUserData> response = ApiResponse.of(
@@ -66,10 +64,10 @@ public class AuthController {
 
     @PostMapping("/parents/signup")
     public ResponseEntity<ApiResponse<SignupUserData>> signupParent(
-            @RequestHeader(value = HttpHeaders.AUTHORIZATION, required = false) String authorization,
+            @AuthenticationPrincipal AuthenticatedUserPrincipal principal,
             @RequestBody ParentSignupRequest request
     ) {
-        Long userId = tokenAuthService.extractUserIdFromAuthorization(authorization);
+        Long userId = principal.userId();
         ParentSignupResult result = authService.signupParent(userId, request);
 
         ApiResponse<SignupUserData> response = ApiResponse.of(
@@ -84,9 +82,9 @@ public class AuthController {
 
     @PostMapping("/teachers/classcode")
     public ResponseEntity<ApiResponse<ClassCodeData>> createClassCode(
-            @RequestHeader(value = HttpHeaders.AUTHORIZATION, required = false) String authorization
+            @AuthenticationPrincipal AuthenticatedUserPrincipal principal
     ) {
-        Long userId = tokenAuthService.extractUserIdFromAuthorization(authorization);
+        Long userId = principal.userId();
         ClassCodeCreateResult result = authService.createTeacherClassCode(userId);
 
         ApiResponse<ClassCodeData> response = ApiResponse.of(

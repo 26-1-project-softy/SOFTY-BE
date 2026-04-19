@@ -8,13 +8,9 @@ import com.softy.be.chat.repository.AiRecommendationRepository;
 import com.softy.be.chat.repository.MessageRepository;
 import com.softy.be.report.repository.PdfFileRepository;
 import com.softy.be.report.repository.TeacherPdfCountRow;
-import com.softy.be.user.entity.User;
-import com.softy.be.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
-import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.server.ResponseStatusException;
 
 import java.util.List;
 
@@ -22,18 +18,14 @@ import java.util.List;
 @RequiredArgsConstructor
 public class AdminStatisticsService {
 
-    private static final String ADMIN_ROLE = "ADMIN";
     private static final double USED_AS_IS_THRESHOLD = 0.99;
 
-    private final UserRepository userRepository;
     private final PdfFileRepository pdfFileRepository;
     private final MessageRepository messageRepository;
     private final AiRecommendationRepository aiRecommendationRepository;
 
     @Transactional(readOnly = true)
-    public AdminPdfStatisticsData getPdfStatistics(Long authenticatedUserId) {
-        validateAdminOrThrow(authenticatedUserId);
-
+    public AdminPdfStatisticsData getPdfStatistics() {
         long totalPdfCount = pdfFileRepository.count();
         List<AdminTeacherPdfCountData> list = pdfFileRepository.findTeacherPdfCounts()
                 .stream()
@@ -44,9 +36,7 @@ public class AdminStatisticsService {
     }
 
     @Transactional(readOnly = true)
-    public AdminRiskStatisticsData getRiskStatistics(Long authenticatedUserId) {
-        validateAdminOrThrow(authenticatedUserId);
-
+    public AdminRiskStatisticsData getRiskStatistics() {
         long totalMessageCount = messageRepository.countTeacherMessages();
         long detectedConflictCount = messageRepository.countTeacherDisputeRiskMessages();
         double conflictDetectionRate = calculateDetectionRate(totalMessageCount, detectedConflictCount);
@@ -59,9 +49,7 @@ public class AdminStatisticsService {
     }
 
     @Transactional(readOnly = true)
-    public AdminRecommendationAdoptionData getRecommendationAdoptionStatistics(Long authenticatedUserId) {
-        validateAdminOrThrow(authenticatedUserId);
-
+    public AdminRecommendationAdoptionData getRecommendationAdoptionStatistics() {
         long totalRecommendationCount = aiRecommendationRepository.countTeacherRecommendations();
         long totalUsedAsIs = aiRecommendationRepository.countTeacherRecommendationsUsedAsIs(USED_AS_IS_THRESHOLD);
         long totalModified = aiRecommendationRepository.countTeacherRecommendationsModified(USED_AS_IS_THRESHOLD);
@@ -69,15 +57,6 @@ public class AdminStatisticsService {
 
         double adoptionRate = calculateAdoptionRate(totalRecommendationCount, totalUsedAsIs, totalModified);
         return new AdminRecommendationAdoptionData(adoptionRate, totalUsedAsIs, totalModified, totalNotUsed);
-    }
-
-    private void validateAdminOrThrow(Long authenticatedUserId) {
-        User user = userRepository.findById(authenticatedUserId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "사용자를 찾을 수 없습니다."));
-
-        if (!ADMIN_ROLE.equalsIgnoreCase(user.getRole())) {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "관리자 계정만 통계를 조회할 수 있습니다.");
-        }
     }
 
     private AdminTeacherPdfCountData toTeacherPdfCountData(TeacherPdfCountRow row) {

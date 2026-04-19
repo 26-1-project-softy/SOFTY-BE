@@ -1,6 +1,6 @@
 package com.softy.be.user.controller;
 
-import com.softy.be.auth.service.TokenAuthService;
+import com.softy.be.auth.security.AuthenticatedUserPrincipal;
 import com.softy.be.common.api.ApiResponse;
 import com.softy.be.user.dto.TeacherClassUpdateData;
 import com.softy.be.user.dto.TeacherClassUpdateRequest;
@@ -11,12 +11,11 @@ import com.softy.be.user.service.TeacherClassUpdateResult;
 import com.softy.be.user.service.TeacherSettingResult;
 import com.softy.be.user.service.UserAccountService;
 import lombok.RequiredArgsConstructor;
-import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -27,14 +26,13 @@ import java.util.List;
 @RequiredArgsConstructor
 public class TeacherController {
 
-    private final TokenAuthService tokenAuthService;
     private final UserAccountService userAccountService;
 
     @GetMapping("/setting")
     public ResponseEntity<ApiResponse<TeacherSettingData>> getSetting(
-            @RequestHeader(value = HttpHeaders.AUTHORIZATION, required = false) String authorization
+            @AuthenticationPrincipal AuthenticatedUserPrincipal principal
     ) {
-        Long userId = tokenAuthService.extractUserIdFromAuthorization(authorization);
+        Long userId = principal.userId();
         TeacherSettingResult result = userAccountService.getTeacherSetting(userId);
 
         List<TeacherSettingScheduleData> schedules = result.schedules()
@@ -65,10 +63,10 @@ public class TeacherController {
 
     @PatchMapping("/me/class")
     public ResponseEntity<ApiResponse<TeacherClassUpdateData>> updateMyClass(
-            @RequestHeader(value = HttpHeaders.AUTHORIZATION, required = false) String authorization,
+            @AuthenticationPrincipal AuthenticatedUserPrincipal principal,
             @RequestBody TeacherClassUpdateRequest request
     ) {
-        Long userId = tokenAuthService.extractUserIdFromAuthorization(authorization);
+        Long userId = principal.userId();
         TeacherClassUpdateResult result = userAccountService.updateTeacherClass(userId, request);
 
         ApiResponse<TeacherClassUpdateData> response = ApiResponse.of(
@@ -83,10 +81,10 @@ public class TeacherController {
 
     @PatchMapping("/me/work-hours")
     public ResponseEntity<ApiResponse<Object>> updateMyWorkHours(
-            @RequestHeader(value = HttpHeaders.AUTHORIZATION, required = false) String authorization,
+            @AuthenticationPrincipal AuthenticatedUserPrincipal principal,
             @RequestBody TeacherWorkHoursUpdateRequest request
     ) {
-        Long userId = tokenAuthService.extractUserIdFromAuthorization(authorization);
+        Long userId = principal.userId();
         userAccountService.updateTeacherWorkHours(userId, request);
 
         ApiResponse<Object> response = ApiResponse.of(
