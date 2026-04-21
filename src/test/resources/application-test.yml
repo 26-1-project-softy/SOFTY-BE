@@ -28,3 +28,12 @@ jwt:
 
 admin:
   provision-key: test-admin-provision-key
+
+embedding:
+  api-key: test-embedding-api-key
+  model: embedding
+  url: http://localhost:9000/v1/embeddings
+
+ai:
+  evaluation:
+    base-url: http://localhost:65000
