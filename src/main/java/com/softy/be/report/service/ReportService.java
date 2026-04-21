@@ -4,7 +4,6 @@ import com.softy.be.chat.entity.ChatRoom;
 import com.softy.be.chat.entity.Message;
 import com.softy.be.chat.repository.ChatRoomRepository;
 import com.softy.be.chat.repository.MessageRepository;
-import com.softy.be.chat.repository.ReportChatPreviewMetaRow;
 import com.softy.be.chat.repository.ReportChatRoomRow;
 import com.softy.be.report.dto.ReportChatPreviewData;
 import com.softy.be.report.dto.ReportChatPreviewMessageItemData;
@@ -29,7 +28,6 @@ import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-import java.util.Locale;
 import java.util.UUID;
 
 @Service
@@ -97,7 +95,7 @@ public class ReportService {
 
         getTeacherOrThrow(userId);
 
-        ChatRoom chatRoom = chatRoomRepository.findById(chatRoomId)
+        chatRoomRepository.findById(chatRoomId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Chat room not found."));
 
         boolean hasAccess = chatRoomRepository.existsParticipantByChatRoomIdAndUserId(chatRoomId, userId);
@@ -110,13 +108,9 @@ public class ReportService {
 
         List<ReportChatPreviewMessageItemData> messages = new ArrayList<>(descendingMessages.size());
         for (Message message : descendingMessages) {
-            String senderRole = message.getSender().getRole() == null ? "" : message.getSender().getRole().toUpperCase(Locale.ROOT);
             messages.add(new ReportChatPreviewMessageItemData(
                     message.getId(),
-                    message.getSender().getId(),
-                    senderRole,
                     message.getSender().getId().equals(userId),
-                    nullToEmpty(message.getType()),
                     nullToEmpty(message.getContent()),
                     message.getCreatedAt()
             ));
@@ -126,18 +120,8 @@ public class ReportService {
         Long nextCursor = messages.isEmpty() ? null : messages.get(0).messageId();
         boolean hasNext = nextCursor != null && messageRepository.existsOlderMessage(chatRoomId, nextCursor);
 
-        ReportChatPreviewMetaRow meta = chatRoomRepository.findReportChatRoomPreviewMeta(chatRoomId);
-        String parentName = meta == null ? "" : nullToEmpty(meta.getParentName());
-        String studentName = meta == null ? "" : nullToEmpty(meta.getStudentName());
-        String intentLabel = meta == null ? nullToEmpty(chatRoom.getIntentLabel()) : nullToEmpty(meta.getIntentLabel());
-        String status = meta == null ? nullToEmpty(chatRoom.getStatus()) : nullToEmpty(meta.getStatus());
-
         return new ReportChatPreviewData(
                 chatRoomId,
-                parentName,
-                studentName,
-                intentLabel,
-                status,
                 messages,
                 nextCursor,
                 hasNext
