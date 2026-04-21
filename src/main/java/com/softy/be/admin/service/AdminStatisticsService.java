@@ -1,18 +1,24 @@
 package com.softy.be.admin.service;
 
 import com.softy.be.admin.dto.AdminPdfStatisticsData;
+import com.softy.be.admin.dto.AdminPerformanceStatisticsData;
 import com.softy.be.admin.dto.AdminRecommendationAdoptionData;
 import com.softy.be.admin.dto.AdminRiskStatisticsData;
 import com.softy.be.admin.dto.AdminTeacherPdfCountData;
+import com.softy.be.admin.repository.ModelTrainingHistoryRepository;
 import com.softy.be.chat.repository.AiRecommendationRepository;
 import com.softy.be.chat.repository.MessageRepository;
 import com.softy.be.report.repository.PdfFileRepository;
 import com.softy.be.report.repository.TeacherPdfCountRow;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.util.List;
+
+import static org.springframework.http.HttpStatus.NOT_FOUND;
 
 @Service
 @RequiredArgsConstructor
@@ -21,6 +27,8 @@ public class AdminStatisticsService {
     private final PdfFileRepository pdfFileRepository;
     private final MessageRepository messageRepository;
     private final AiRecommendationRepository aiRecommendationRepository;
+    private final AiEvaluationClient aiEvaluationClient;
+    private final ModelTrainingHistoryRepository modelTrainingHistoryRepository;
 
     @Transactional(readOnly = true)
     public AdminPdfStatisticsData getPdfStatistics() {
@@ -57,6 +65,37 @@ public class AdminStatisticsService {
         return new AdminRecommendationAdoptionData(adoptionRate, totalUsedAsIs, totalModified, totalNotUsed);
     }
 
+    @Transactional(readOnly = true)
+    public AdminPerformanceStatisticsData getPerformanceStatistics(String evaluationId) {
+        String resolvedEvaluationId = resolveEvaluationId(evaluationId);
+        AiEvaluationClient.AiEvaluationResult result = aiEvaluationClient.getEvaluation(resolvedEvaluationId);
+
+        return new AdminPerformanceStatisticsData(
+                result.evaluationId(),
+                nullToZero(result.precision()),
+                nullToZero(result.recall()),
+                nullToZero(result.f1Score()),
+                nullToEmpty(result.status()),
+                result.passed(),
+                nullToEmpty(result.version()),
+                result.resultCode(),
+                nullToEmpty(result.resultMessage())
+        );
+    }
+
+    private String resolveEvaluationId(String evaluationId) {
+        if (evaluationId != null && !evaluationId.isBlank()) {
+            return evaluationId.trim();
+        }
+
+        return modelTrainingHistoryRepository.findLatestEvaluationIds(PageRequest.of(0, 1))
+                .stream()
+                .findFirst()
+                .orElseThrow(
+                () -> new ResponseStatusException(NOT_FOUND, "No evaluationId available for performance statistics.")
+                );
+    }
+
     private AdminTeacherPdfCountData toTeacherPdfCountData(TeacherPdfCountRow row) {
         long teacherId = row.getTeacherId() == null ? 0L : row.getTeacherId();
         long pdfCount = row.getPdfCount() == null ? 0L : row.getPdfCount();
@@ -81,5 +120,13 @@ public class AdminStatisticsService {
         }
         double rawRate = ((totalUsedAsIs + totalModified) * 100.0) / totalRecommendationCount;
         return Math.round(rawRate * 100.0) / 100.0;
+    }
+
+    private double nullToZero(Double value) {
+        return value == null ? 0.0 : value;
+    }
+
+    private String nullToEmpty(String value) {
+        return value == null ? "" : value;
     }
 }
