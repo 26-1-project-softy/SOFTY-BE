@@ -5,6 +5,8 @@ import com.softy.be.chat.entity.Message;
 import com.softy.be.chat.repository.ChatRoomRepository;
 import com.softy.be.chat.repository.MessageRepository;
 import com.softy.be.chat.repository.ReportChatRoomRow;
+import com.softy.be.report.dto.ReportChatPreviewData;
+import com.softy.be.report.dto.ReportChatPreviewMessageItemData;
 import com.softy.be.report.dto.ReportChatRoomItemData;
 import com.softy.be.report.dto.ReportChatRoomListData;
 import com.softy.be.report.dto.ReportPdfCreateData;
@@ -15,6 +17,7 @@ import com.softy.be.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -22,6 +25,8 @@ import org.springframework.web.server.ResponseStatusException;
 
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
 
@@ -31,6 +36,7 @@ public class ReportService {
 
     private static final String ROLE_TEACHER = "TEACHER";
     private static final int MAX_PAGE_SIZE = 100;
+    private static final int MAX_PREVIEW_SIZE = 100;
     private static final DateTimeFormatter FILE_TIME_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd_HHmmss");
 
     private final UserRepository userRepository;
@@ -72,6 +78,53 @@ public class ReportService {
                 result.getTotalElements(),
                 result.getTotalPages(),
                 result.hasNext()
+        );
+    }
+
+    @Transactional(readOnly = true)
+    public ReportChatPreviewData getChatPreview(Long userId, Long chatRoomId, Long cursor, int size) {
+        if (chatRoomId == null || chatRoomId <= 0) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid chatRoomId.");
+        }
+        if (size < 1 || size > MAX_PREVIEW_SIZE) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "size must be between 1 and 100.");
+        }
+        if (cursor != null && cursor <= 0) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid cursor.");
+        }
+
+        getTeacherOrThrow(userId);
+
+        chatRoomRepository.findById(chatRoomId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Chat room not found."));
+
+        boolean hasAccess = chatRoomRepository.existsParticipantByChatRoomIdAndUserId(chatRoomId, userId);
+        if (!hasAccess) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "No access to this chat room.");
+        }
+
+        Pageable pageable = PageRequest.of(0, size);
+        List<Message> descendingMessages = messageRepository.findPreviewMessages(chatRoomId, cursor, pageable);
+
+        List<ReportChatPreviewMessageItemData> messages = new ArrayList<>(descendingMessages.size());
+        for (Message message : descendingMessages) {
+            messages.add(new ReportChatPreviewMessageItemData(
+                    message.getId(),
+                    message.getSender().getId().equals(userId),
+                    nullToEmpty(message.getContent()),
+                    message.getCreatedAt()
+            ));
+        }
+        Collections.reverse(messages);
+
+        Long nextCursor = messages.isEmpty() ? null : messages.get(0).messageId();
+        boolean hasNext = nextCursor != null && messageRepository.existsOlderMessage(chatRoomId, nextCursor);
+
+        return new ReportChatPreviewData(
+                chatRoomId,
+                messages,
+                nextCursor,
+                hasNext
         );
     }
 

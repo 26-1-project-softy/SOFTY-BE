@@ -1,0 +1,202 @@
+package com.softy.be.admin.service;
+
+import com.fasterxml.jackson.annotation.JsonProperty;
+import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.web.client.RestTemplateBuilder;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpMethod;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
+import org.springframework.http.client.SimpleClientHttpRequestFactory;
+import org.springframework.stereotype.Component;
+import org.springframework.web.client.HttpStatusCodeException;
+import org.springframework.web.client.ResourceAccessException;
+import org.springframework.web.client.RestTemplate;
+import org.springframework.web.server.ResponseStatusException;
+
+import java.net.URI;
+import java.time.Duration;
+
+import static org.springframework.http.HttpStatus.BAD_REQUEST;
+import static org.springframework.http.HttpStatus.BAD_GATEWAY;
+import static org.springframework.http.HttpStatus.GATEWAY_TIMEOUT;
+
+@Component
+@RequiredArgsConstructor
+public class AiEvaluationClient {
+
+    private final RestTemplateBuilder restTemplateBuilder;
+
+    @Value("${ai.evaluation.base-url}")
+    private String aiServerBaseUrl;
+
+    public AiEvaluationResult getEvaluation(String evaluationId) {
+        if (evaluationId == null || evaluationId.isBlank()) {
+            throw new ResponseStatusException(BAD_REQUEST, "evaluationId는 필수입니다.");
+        }
+
+        String normalizedEvaluationId = evaluationId.trim();
+        URI uri = URI.create(aiServerBaseUrl + "/ai/evaluations/" + normalizedEvaluationId);
+
+        RestTemplate restTemplate = buildRestTemplate();
+
+        try {
+            ResponseEntity<AiEvaluationApiResponse> response = restTemplate.exchange(
+                    uri,
+                    HttpMethod.GET,
+                    null,
+                    AiEvaluationApiResponse.class
+            );
+
+            AiEvaluationApiResponse body = response.getBody();
+            if (body == null) {
+                throw new ResponseStatusException(BAD_GATEWAY, "AI 평가 응답이 비어 있습니다.");
+            }
+
+            return new AiEvaluationResult(
+                    normalizedEvaluationId,
+                    body.precision,
+                    body.recall,
+                    body.f1Score,
+                    body.status,
+                    body.passed,
+                    body.version,
+                    body.resultCode,
+                    body.resultMessage
+            );
+        } catch (HttpStatusCodeException e) {
+            throw new ResponseStatusException(BAD_GATEWAY, "AI 평가 API 호출에 실패했습니다. 상태코드: " + e.getStatusCode(), e);
+        } catch (ResourceAccessException e) {
+            throw new ResponseStatusException(GATEWAY_TIMEOUT, "AI 평가 API 호출이 시간 초과되었습니다.", e);
+        } catch (IllegalArgumentException e) {
+            throw new ResponseStatusException(BAD_REQUEST, "AI 서버 URL 또는 evaluationId가 올바르지 않습니다.", e);
+        }
+    }
+
+    public AiEvaluationRerunResult requestRiskDetectionEvaluation(String version, String datasetVersion) {
+        if (version == null || version.isBlank()) {
+            throw new ResponseStatusException(BAD_REQUEST, "version은 필수입니다.");
+        }
+        if (datasetVersion == null || datasetVersion.isBlank()) {
+            throw new ResponseStatusException(BAD_REQUEST, "datasetVersion은 필수입니다.");
+        }
+
+        URI uri = URI.create(aiServerBaseUrl + "/ai/evaluations/risk-detection");
+        RestTemplate restTemplate = buildRestTemplate();
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+
+        AiEvaluationRerunApiRequest requestBody = new AiEvaluationRerunApiRequest(
+                version.trim(),
+                datasetVersion.trim()
+        );
+        HttpEntity<AiEvaluationRerunApiRequest> requestEntity = new HttpEntity<>(requestBody, headers);
+
+        try {
+            ResponseEntity<AiEvaluationRerunApiResponse> response = restTemplate.exchange(
+                    uri,
+                    HttpMethod.POST,
+                    requestEntity,
+                    AiEvaluationRerunApiResponse.class
+            );
+
+            AiEvaluationRerunApiResponse body = response.getBody();
+            if (body == null) {
+                throw new ResponseStatusException(BAD_GATEWAY, "AI 재평가 응답이 비어 있습니다.");
+            }
+
+            return new AiEvaluationRerunResult(
+                    body.evaluationId,
+                    body.status,
+                    body.resultCode,
+                    body.resultMessage,
+                    body.contentType
+            );
+        } catch (HttpStatusCodeException e) {
+            throw new ResponseStatusException(BAD_GATEWAY, "AI 재평가 API 호출에 실패했습니다. 상태코드: " + e.getStatusCode(), e);
+        } catch (ResourceAccessException e) {
+            throw new ResponseStatusException(GATEWAY_TIMEOUT, "AI 재평가 API 호출이 시간 초과되었습니다.", e);
+        } catch (IllegalArgumentException e) {
+            throw new ResponseStatusException(BAD_REQUEST, "AI 서버 URL이 올바르지 않습니다.", e);
+        }
+    }
+
+    private RestTemplate buildRestTemplate() {
+        return restTemplateBuilder
+                .requestFactory(() -> {
+                    SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory();
+                    factory.setConnectTimeout((int) Duration.ofSeconds(3).toMillis());
+                    factory.setReadTimeout((int) Duration.ofSeconds(10).toMillis());
+                    return factory;
+                })
+                .build();
+    }
+
+    public record AiEvaluationResult(
+            String evaluationId,
+            Double precision,
+            Double recall,
+            Double f1Score,
+            String status,
+            Boolean passed,
+            String version,
+            Integer resultCode,
+            String resultMessage
+    ) {
+    }
+
+    public record AiEvaluationRerunResult(
+            String evaluationId,
+            String status,
+            Integer resultCode,
+            String resultMessage,
+            String contentType
+    ) {
+    }
+
+    private record AiEvaluationRerunApiRequest(
+            String version,
+            @JsonProperty("dataset_version")
+            String datasetVersion
+    ) {
+    }
+
+    @SuppressWarnings("unused")
+    private static class AiEvaluationApiResponse {
+        @JsonProperty("result_code")
+        public Integer resultCode;
+
+        @JsonProperty("result_msg")
+        public String resultMessage;
+
+        public String version;
+        public String status;
+        public Double precision;
+        public Double recall;
+
+        @JsonProperty("f1_score")
+        public Double f1Score;
+
+        public Boolean passed;
+    }
+
+    @SuppressWarnings("unused")
+    private static class AiEvaluationRerunApiResponse {
+        @JsonProperty("content_type")
+        public String contentType;
+
+        @JsonProperty("result_code")
+        public Integer resultCode;
+
+        @JsonProperty("result_msg")
+        public String resultMessage;
+
+        @JsonProperty("evaluation_id")
+        public String evaluationId;
+
+        public String status;
+    }
+}

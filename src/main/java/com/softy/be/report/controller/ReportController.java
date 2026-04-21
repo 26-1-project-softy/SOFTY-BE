@@ -2,6 +2,7 @@ package com.softy.be.report.controller;
 
 import com.softy.be.auth.security.AuthenticatedUserPrincipal;
 import com.softy.be.common.api.ApiResponse;
+import com.softy.be.report.dto.ReportChatPreviewData;
 import com.softy.be.report.dto.ReportChatRoomListData;
 import com.softy.be.report.dto.ReportPdfCreateData;
 import com.softy.be.report.service.ReportService;
@@ -34,7 +35,27 @@ public class ReportController {
         ApiResponse<ReportChatRoomListData> response = ApiResponse.of(
                 true,
                 200,
-                "채팅방 목록 조회에 성공했습니다.",
+                "Chat room list retrieved successfully.",
+                data
+        );
+
+        return ResponseEntity.ok(response);
+    }
+
+    @GetMapping("/chat-rooms/{chatRoomId}/preview")
+    public ResponseEntity<ApiResponse<ReportChatPreviewData>> getChatPreview(
+            @AuthenticationPrincipal AuthenticatedUserPrincipal principal,
+            @PathVariable("chatRoomId") Long chatRoomId,
+            @RequestParam(value = "cursor", required = false) Long cursor,
+            @RequestParam(value = "size", defaultValue = "30") int size
+    ) {
+        Long userId = principal.userId();
+        ReportChatPreviewData data = reportService.getChatPreview(userId, chatRoomId, cursor, size);
+
+        ApiResponse<ReportChatPreviewData> response = ApiResponse.of(
+                true,
+                200,
+                "Chat preview retrieved successfully.",
                 data
         );
 

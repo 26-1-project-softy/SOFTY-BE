@@ -42,14 +42,17 @@ jwt:
 admin:
   provision-key: ${ADMIN_PROVISION_KEY}
 
-openai:
-  api-key: ${OPENAI_API_KEY:}
-  embedding-model: ${OPENAI_EMBEDDING_MODEL:text-embedding-3-small}
-  embedding-url: ${OPENAI_EMBEDDING_URL:https://api.openai.com/v1/embeddings}
-
 embedding:
+  api-key: ${EMBEDDING_API_KEY}
+  model: ${EMBEDDING_MODEL}
+  url: ${EMBEDDING_API_URL}
+  request-interval-ms: ${EMBEDDING_REQUEST_INTERVAL_MS:100}
+  retry:
+    max-attempts: ${EMBEDDING_RETRY_MAX_ATTEMPTS:3}
+    initial-delay-ms: ${EMBEDDING_RETRY_INITIAL_DELAY_MS:300}
+    backoff-multiplier: ${EMBEDDING_RETRY_BACKOFF_MULTIPLIER:2.0}
   schedule:
-    cron: ${EMBEDDING_SCHEDULE_CRON:0 0 3 * * SUN}
+    cron: ${EMBEDDING_SCHEDULE_CRON:0 0 3 * * *}
     zone: ${EMBEDDING_SCHEDULE_ZONE:Asia/Seoul}
 
 swagger:
@@ -64,6 +67,10 @@ report:
       key-prefix: ${REPORT_PDF_S3_KEY_PREFIX:reports}
       presigned-expire-seconds: ${REPORT_PDF_PRESIGNED_EXPIRE_SECONDS:600}
     font-path: ${REPORT_PDF_FONT_PATH:}
+
+ai:
+  evaluation:
+    base-url: ${AI_SERVER_BASE_URL}
 
 management:
   endpoints:
