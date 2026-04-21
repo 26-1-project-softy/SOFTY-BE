@@ -52,7 +52,7 @@ embedding:
     initial-delay-ms: ${EMBEDDING_RETRY_INITIAL_DELAY_MS:300}
     backoff-multiplier: ${EMBEDDING_RETRY_BACKOFF_MULTIPLIER:2.0}
   schedule:
-    cron: ${EMBEDDING_SCHEDULE_CRON:0 0 3 * * SUN}
+    cron: ${EMBEDDING_SCHEDULE_CRON:0 0 3 * * *}
     zone: ${EMBEDDING_SCHEDULE_ZONE:Asia/Seoul}
 
 swagger:
