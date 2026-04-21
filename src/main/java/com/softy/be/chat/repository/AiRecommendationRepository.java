@@ -47,23 +47,24 @@ public interface AiRecommendationRepository extends JpaRepository<AiRecommendati
             """)
     long countTeacherRecommendationsModified();
 
-    @Query("""
-            SELECT COUNT(ar)
-            FROM AiRecommendation ar
-            JOIN ar.message m
-            JOIN m.sender s
-            WHERE UPPER(s.role) = 'TEACHER'
+    @Query(value = """
+            SELECT COUNT(ar.id)
+            FROM ai_recommendation ar
+            JOIN message m ON m.id = ar.message_id
+            JOIN users u ON u.id = m.sender_id
+            WHERE UPPER(u.role) = 'TEACHER'
               AND ar.content IS NOT NULL
+              AND ar.embedding IS NOT NULL
               AND NOT (
-                    m.modifyContent IS NOT NULL
-                    AND m.modifyContent = ar.content
+                    m.modify_content IS NOT NULL
+                    AND m.modify_content = ar.content
               )
               AND NOT (
-                    m.similarityModified IS NOT NULL
-                    AND m.similarityOriginal IS NOT NULL
-                    AND m.similarityModified > m.similarityOriginal
+                    m.similarity_modified IS NOT NULL
+                    AND m.similarity_original IS NOT NULL
+                    AND m.similarity_modified > m.similarity_original
               )
-            """)
+            """, nativeQuery = true)
     long countTeacherRecommendationsNotUsed();
 
     @Query(value = """

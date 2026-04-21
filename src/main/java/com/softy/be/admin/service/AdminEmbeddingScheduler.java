@@ -13,11 +13,11 @@ public class AdminEmbeddingScheduler {
     private final AdminEmbeddingService adminEmbeddingService;
 
     @Scheduled(
-            cron = "${embedding.schedule.cron:0 0 3 * * SUN}",
+            cron = "${embedding.schedule.cron:0 0 3 * * *}",
             zone = "${embedding.schedule.zone:Asia/Seoul}"
     )
-    public void runWeeklyEmbeddingJob() {
+    public void runDailyEmbeddingJob() {
         adminEmbeddingService.runScheduled();
-        log.info("Weekly embedding scheduler executed.");
+        log.info("임베딩 스케줄러(매일 새벽 3시)가 실행되었습니다.");
     }
 }

@@ -34,6 +34,13 @@ SOFTY 백엔드는 교사-학부모 소통 과정의 분쟁 리스크 완화를 
 | `JWT_EXPIRATION_SECONDS` | Access Token 만료(초) | `86400` |
 | `JWT_REFRESH_EXPIRATION_SECONDS` | Refresh Token 만료(초) | `1209600` |
 | `ADMIN_PROVISION_KEY` | 관리자 생성용 프로비전 키 | 없음 |
+| `EMBEDDING_API_KEY` | 임베딩 API 인증 키(Bearer) | 없음 |
+| `EMBEDDING_MODEL` | 임베딩 모델명 | 없음 |
+| `EMBEDDING_API_URL` | 임베딩 API URL | 없음 |
+| `EMBEDDING_REQUEST_INTERVAL_MS` | 임베딩 API 호출 간 최소 간격(ms) | `100` |
+| `EMBEDDING_RETRY_MAX_ATTEMPTS` | 503/504/429 재시도 최대 횟수 | `3` |
+| `EMBEDDING_RETRY_INITIAL_DELAY_MS` | 재시도 초기 대기(ms) | `300` |
+| `EMBEDDING_RETRY_BACKOFF_MULTIPLIER` | 재시도 백오프 배수 | `2.0` |
 | `SWAGGER_SERVER_URL` | 서버 URL | 빈 값 |
 | `SWAGGER_LOCAL_SERVER_URL` | 로컬 URL | 빈 값 |
 | `LOG_PATH` | 로그 파일 경로 | `/app/logs` |
