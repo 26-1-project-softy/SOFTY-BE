@@ -30,10 +30,10 @@ public class OpenAiEmbeddingClient {
 
     public List<Double> createEmbedding(String input) {
         if (apiKey == null || apiKey.isBlank()) {
-            throw new IllegalStateException("OPENAI_API_KEY is missing");
+            throw new IllegalStateException("OPENAI_API_KEY가 누락되었습니다.");
         }
         if (input == null || input.isBlank()) {
-            throw new IllegalArgumentException("Embedding input is empty");
+            throw new IllegalArgumentException("임베딩 입력값이 비어 있습니다.");
         }
 
         RestTemplate restTemplate = restTemplateBuilder.build();
@@ -53,12 +53,12 @@ public class OpenAiEmbeddingClient {
 
         EmbeddingResponse body = response.getBody();
         if (body == null || body.data == null || body.data.isEmpty()) {
-            throw new IllegalStateException("OpenAI embedding response is empty");
+            throw new IllegalStateException("OpenAI 임베딩 응답이 비어 있습니다.");
         }
 
         List<Double> embedding = body.data.get(0).embedding;
         if (embedding == null || embedding.isEmpty()) {
-            throw new IllegalStateException("OpenAI embedding vector is empty");
+            throw new IllegalStateException("OpenAI 임베딩 벡터가 비어 있습니다.");
         }
         return embedding.stream().map(value -> Objects.requireNonNullElse(value, 0.0)).toList();
     }
