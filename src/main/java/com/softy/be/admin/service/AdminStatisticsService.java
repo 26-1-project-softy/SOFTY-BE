@@ -48,10 +48,10 @@ public class AdminStatisticsService {
 
     @Transactional(readOnly = true)
     public AdminRecommendationAdoptionData getRecommendationAdoptionStatistics() {
-        long totalRecommendationCount = aiRecommendationRepository.countTeacherRecommendations();
         long totalUsedAsIs = aiRecommendationRepository.countTeacherRecommendationsUsedAsIs();
         long totalModified = aiRecommendationRepository.countTeacherRecommendationsModified();
         long totalNotUsed = aiRecommendationRepository.countTeacherRecommendationsNotUsed();
+        long totalRecommendationCount = totalUsedAsIs + totalModified + totalNotUsed;
 
         double adoptionRate = calculateAdoptionRate(totalRecommendationCount, totalUsedAsIs, totalModified);
         return new AdminRecommendationAdoptionData(adoptionRate, totalUsedAsIs, totalModified, totalNotUsed);
