@@ -67,6 +67,7 @@ public class OpenAiEmbeddingClient {
 
         long delayMs = Math.max(0, retryInitialDelayMs);
         int attempts = Math.max(1, maxRetryAttempts);
+
         for (int attempt = 1; attempt <= attempts; attempt++) {
             try {
                 applyRateLimitIfNeeded();
@@ -85,7 +86,10 @@ public class OpenAiEmbeddingClient {
                 if (embedding == null || embedding.isEmpty()) {
                     throw new IllegalStateException("임베딩 벡터가 비어 있습니다.");
                 }
-                return embedding.stream().map(value -> Objects.requireNonNullElse(value, 0.0)).toList();
+
+                return embedding.stream()
+                        .map(value -> Objects.requireNonNullElse(value, 0.0))
+                        .toList();
             } catch (HttpStatusCodeException e) {
                 if (!isRetryableStatus(e.getStatusCode()) || attempt == attempts) {
                     throw e;
@@ -97,11 +101,12 @@ public class OpenAiEmbeddingClient {
                 if (attempt == attempts) {
                     throw e;
                 }
-                log.warn("임베딩 API 타임아웃/연결 오류 재시도(attempt={}/{}).", attempt, attempts);
+                log.warn("임베딩 API 타임아웃/연결 오류 재시도 예정(attempt={}/{}).", attempt, attempts);
                 sleepForRetry(delayMs);
                 delayMs = (long) (delayMs * Math.max(1.0, retryBackoffMultiplier));
             }
         }
+
         throw new IllegalStateException("임베딩 API 호출 재시도 횟수를 초과했습니다.");
     }
 
@@ -115,6 +120,7 @@ public class OpenAiEmbeddingClient {
         if (interval == 0) {
             return;
         }
+
         synchronized (rateLimitLock) {
             long now = System.currentTimeMillis();
             long elapsed = now - lastRequestAtMs;
