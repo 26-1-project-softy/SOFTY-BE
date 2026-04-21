@@ -11,6 +11,19 @@ public interface ChatRoomRepository extends JpaRepository<ChatRoom, Long> {
 
     @Query(
             value = """
+                    SELECT EXISTS (
+                        SELECT 1
+                        FROM chat_room_user_map crm
+                        WHERE crm.chat_room_id = :chatRoomId
+                          AND crm.user_id = :userId
+                    )
+                    """,
+            nativeQuery = true
+    )
+    boolean existsParticipantByChatRoomIdAndUserId(@Param("chatRoomId") Long chatRoomId, @Param("userId") Long userId);
+
+    @Query(
+            value = """
                     SELECT
                         cr.id AS chatRoomId,
                         (
@@ -85,4 +98,5 @@ public interface ChatRoomRepository extends JpaRepository<ChatRoom, Long> {
             nativeQuery = true
     )
     String findParentNameByChatRoomId(@Param("chatRoomId") Long chatRoomId);
+
 }
