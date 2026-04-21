@@ -41,13 +41,13 @@ public class KakaoOAuthClient {
 
     public String exchangeCodeForAccessToken(String code, String redirectUri) {
         if (code == null || code.trim().isEmpty()) {
-            throw new IllegalArgumentException("kakao authorization code is empty.");
+            throw new IllegalArgumentException("카카오 인가 코드가 비어 있습니다.");
         }
         if (redirectUri == null || redirectUri.trim().isEmpty()) {
-            throw new IllegalArgumentException("kakao redirectUri is empty.");
+            throw new IllegalArgumentException("카카오 redirectUri가 비어 있습니다.");
         }
         if (clientId == null || clientId.trim().isEmpty()) {
-            throw new IllegalStateException("kakao client id is not configured.");
+            throw new IllegalStateException("카카오 client id가 설정되지 않았습니다.");
         }
 
         HttpHeaders headers = new HttpHeaders();
@@ -68,7 +68,7 @@ public class KakaoOAuthClient {
 
         JsonNode responseBody = response.getBody();
         if (responseBody == null || responseBody.path("access_token").isMissingNode()) {
-            throw new IllegalStateException("failed to exchange kakao authorization code.");
+            throw new IllegalStateException("카카오 인가 코드 교환에 실패했습니다.");
         }
         return responseBody.path("access_token").asText();
     }

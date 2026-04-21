@@ -24,6 +24,12 @@ public class ModelTrainingHistory {
     @Column(name = "evaluation_id")
     private String evaluationId;
 
+    @Column(name = "model_version")
+    private String modelVersion;
+
+    @Column(name = "dataset_version")
+    private String datasetVersion;
+
     @Column(name = "trained_at", nullable = false)
     private LocalDateTime trainedAt;
 }

@@ -16,4 +16,17 @@ public interface ModelTrainingHistoryRepository extends JpaRepository<ModelTrain
             ORDER BY m.trainedAt DESC, m.id DESC
             """)
     Page<String> findLatestEvaluationIds(Pageable pageable);
+
+    @Query("""
+            SELECT
+                m.modelVersion AS modelVersion,
+                m.datasetVersion AS datasetVersion
+            FROM ModelTrainingHistory m
+            WHERE m.modelVersion IS NOT NULL
+              AND TRIM(m.modelVersion) <> ''
+              AND m.datasetVersion IS NOT NULL
+              AND TRIM(m.datasetVersion) <> ''
+            ORDER BY m.trainedAt DESC, m.id DESC
+            """)
+    Page<LatestModelVersionRow> findLatestModelVersions(Pageable pageable);
 }

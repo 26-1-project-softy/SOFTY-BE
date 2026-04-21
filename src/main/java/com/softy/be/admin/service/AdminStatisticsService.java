@@ -1,10 +1,13 @@
 package com.softy.be.admin.service;
 
 import com.softy.be.admin.dto.AdminPdfStatisticsData;
+import com.softy.be.admin.dto.AdminEvaluationRerunData;
+import com.softy.be.admin.dto.AdminEvaluationRerunRequest;
 import com.softy.be.admin.dto.AdminPerformanceStatisticsData;
 import com.softy.be.admin.dto.AdminRecommendationAdoptionData;
 import com.softy.be.admin.dto.AdminRiskStatisticsData;
 import com.softy.be.admin.dto.AdminTeacherPdfCountData;
+import com.softy.be.admin.repository.LatestModelVersionRow;
 import com.softy.be.admin.repository.ModelTrainingHistoryRepository;
 import com.softy.be.chat.repository.AiRecommendationRepository;
 import com.softy.be.chat.repository.MessageRepository;
@@ -83,6 +86,28 @@ public class AdminStatisticsService {
         );
     }
 
+    @Transactional(readOnly = true)
+    public AdminEvaluationRerunData requestEvaluationRerun(AdminEvaluationRerunRequest request) {
+        LatestModelVersionRow latestModelVersion = resolveLatestModelVersionIfNeeded(request);
+        String resolvedVersion = resolveVersion(request, latestModelVersion);
+        String resolvedDatasetVersion = resolveDatasetVersion(request, latestModelVersion);
+
+        AiEvaluationClient.AiEvaluationRerunResult result = aiEvaluationClient.requestRiskDetectionEvaluation(
+                resolvedVersion,
+                resolvedDatasetVersion
+        );
+
+        return new AdminEvaluationRerunData(
+                nullToEmpty(result.evaluationId()),
+                nullToEmpty(result.status()),
+                result.resultCode(),
+                nullToEmpty(result.resultMessage()),
+                nullToEmpty(result.contentType()),
+                resolvedVersion,
+                resolvedDatasetVersion
+        );
+    }
+
     private String resolveEvaluationId(String evaluationId) {
         if (evaluationId != null && !evaluationId.isBlank()) {
             return evaluationId.trim();
@@ -92,7 +117,39 @@ public class AdminStatisticsService {
                 .stream()
                 .findFirst()
                 .orElseThrow(
-                () -> new ResponseStatusException(NOT_FOUND, "No evaluationId available for performance statistics.")
+                () -> new ResponseStatusException(NOT_FOUND, "성능 통계 조회에 사용할 evaluationId가 없습니다.")
+                );
+    }
+
+    private String resolveVersion(AdminEvaluationRerunRequest request, LatestModelVersionRow latestModelVersion) {
+        if (request != null && request.version() != null && !request.version().isBlank()) {
+            return request.version().trim();
+        }
+        return latestModelVersion.getModelVersion();
+    }
+
+    private String resolveDatasetVersion(AdminEvaluationRerunRequest request, LatestModelVersionRow latestModelVersion) {
+        if (request != null && request.datasetVersion() != null && !request.datasetVersion().isBlank()) {
+            return request.datasetVersion().trim();
+        }
+        return latestModelVersion.getDatasetVersion();
+    }
+
+    private LatestModelVersionRow resolveLatestModelVersionIfNeeded(AdminEvaluationRerunRequest request) {
+        boolean versionProvided = request != null && request.version() != null && !request.version().isBlank();
+        boolean datasetVersionProvided = request != null && request.datasetVersion() != null && !request.datasetVersion().isBlank();
+        if (versionProvided && datasetVersionProvided) {
+            return null;
+        }
+        return resolveLatestModelVersion();
+    }
+
+    private LatestModelVersionRow resolveLatestModelVersion() {
+        return modelTrainingHistoryRepository.findLatestModelVersions(PageRequest.of(0, 1))
+                .stream()
+                .findFirst()
+                .orElseThrow(
+                        () -> new ResponseStatusException(NOT_FOUND, "재평가에 사용할 모델 버전 정보가 없습니다.")
                 );
     }
 

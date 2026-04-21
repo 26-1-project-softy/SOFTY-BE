@@ -62,10 +62,10 @@ public class AuthService {
     @Transactional
     public KakaoLoginResult loginWithKakaoAuthorizationCode(String code, String redirectUri) {
         if (isBlank(code)) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "kakao authorization code is required.");
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "카카오 인가 코드는 필수입니다.");
         }
         if (isBlank(redirectUri)) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "redirectUri is required.");
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "redirectUri는 필수입니다.");
         }
 
         String kakaoAccessToken = kakaoOAuthClient.exchangeCodeForAccessToken(code.trim(), redirectUri.trim());
@@ -75,7 +75,7 @@ public class AuthService {
     @Transactional
     public KakaoLoginResult loginForDev(String socialId, String role, String nickname) {
         if (isBlank(socialId)) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "socialId is required.");
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "socialId는 필수입니다.");
         }
 
         String normalizedRole = normalizeRoleForDev(role);
@@ -227,7 +227,7 @@ public class AuthService {
 
         throw new ResponseStatusException(
                 HttpStatus.BAD_REQUEST,
-                "role must be one of UNASSIGNED, TEACHER, or PARENT."
+                "role은 UNASSIGNED, TEACHER, PARENT 중 하나여야 합니다."
         );
     }
 
