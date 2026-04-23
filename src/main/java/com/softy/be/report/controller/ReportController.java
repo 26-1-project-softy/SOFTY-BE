@@ -6,6 +6,8 @@ import com.softy.be.report.dto.ReportChatPreviewData;
 import com.softy.be.report.dto.ReportChatRoomListData;
 import com.softy.be.report.dto.ReportPdfCreateData;
 import com.softy.be.report.service.ReportService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -19,11 +21,16 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @RequestMapping("/reports")
 @RequiredArgsConstructor
+@Tag(name = "리포트", description = "리포트 생성 및 미리보기 API")
 public class ReportController {
 
     private final ReportService reportService;
 
     @GetMapping("/chat-rooms")
+    @Operation(
+            summary = "리포트용 채팅방 목록 조회",
+            description = "리포트 생성에 사용할 수 있는 채팅방 목록을 페이지 단위(페이지 넘버)로 반환합니다."
+    )
     public ResponseEntity<ApiResponse<ReportChatRoomListData>> getChatRooms(
             @AuthenticationPrincipal AuthenticatedUserPrincipal principal,
             @RequestParam(value = "page", defaultValue = "0") int page,
@@ -35,7 +42,7 @@ public class ReportController {
         ApiResponse<ReportChatRoomListData> response = ApiResponse.of(
                 true,
                 200,
-                "Chat room list retrieved successfully.",
+                "채팅방 목록 조회에 성공했습니다.",
                 data
         );
 
@@ -43,6 +50,10 @@ public class ReportController {
     }
 
     @GetMapping("/chat-rooms/{chatRoomId}/preview")
+    @Operation(
+            summary = "채팅 미리보기 조회",
+            description = "리포트 검토를 위해 채팅방 메시지 미리보기를 커서 기반(무한 스크롤)으로 반환합니다."
+    )
     public ResponseEntity<ApiResponse<ReportChatPreviewData>> getChatPreview(
             @AuthenticationPrincipal AuthenticatedUserPrincipal principal,
             @PathVariable("chatRoomId") Long chatRoomId,
@@ -55,7 +66,7 @@ public class ReportController {
         ApiResponse<ReportChatPreviewData> response = ApiResponse.of(
                 true,
                 200,
-                "Chat preview retrieved successfully.",
+                "채팅 미리보기 조회에 성공했습니다.",
                 data
         );
 
@@ -63,6 +74,10 @@ public class ReportController {
     }
 
     @PostMapping("/chat-rooms/{chatRoomId}/pdfs")
+    @Operation(
+            summary = "리포트 PDF 생성",
+            description = "채팅방 리포트 PDF를 생성하고 다운로드 가능한 메타데이터를 반환합니다."
+    )
     public ResponseEntity<ApiResponse<ReportPdfCreateData>> createPdf(
             @AuthenticationPrincipal AuthenticatedUserPrincipal principal,
             @PathVariable("chatRoomId") Long chatRoomId

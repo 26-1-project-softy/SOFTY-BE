@@ -84,23 +84,23 @@ public class ReportService {
     @Transactional(readOnly = true)
     public ReportChatPreviewData getChatPreview(Long userId, Long chatRoomId, Long cursor, int size) {
         if (chatRoomId == null || chatRoomId <= 0) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid chatRoomId.");
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "유효하지 않은 채팅방 ID입니다.");
         }
         if (size < 1 || size > MAX_PREVIEW_SIZE) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "size must be between 1 and 100.");
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "size는 1 이상 100 이하여야 합니다.");
         }
         if (cursor != null && cursor <= 0) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid cursor.");
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "유효하지 않은 커서입니다.");
         }
 
         getTeacherOrThrow(userId);
 
         chatRoomRepository.findById(chatRoomId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Chat room not found."));
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "채팅방을 찾을 수 없습니다."));
 
         boolean hasAccess = chatRoomRepository.existsParticipantByChatRoomIdAndUserId(chatRoomId, userId);
         if (!hasAccess) {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "No access to this chat room.");
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "해당 채팅방에 접근 권한이 없습니다.");
         }
 
         Pageable pageable = PageRequest.of(0, size);
