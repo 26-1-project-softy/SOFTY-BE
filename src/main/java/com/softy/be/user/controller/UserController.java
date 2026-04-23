@@ -5,6 +5,8 @@ import com.softy.be.common.api.ApiResponse;
 import com.softy.be.user.dto.UserMeData;
 import com.softy.be.user.service.UserAccountService;
 import com.softy.be.user.service.UserMeResult;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -16,11 +18,16 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @RequestMapping("/users")
 @RequiredArgsConstructor
+@Tag(name = "사용자 계정", description = "내 정보 및 계정 관리 API")
 public class UserController {
 
     private final UserAccountService userAccountService;
 
     @GetMapping("/me")
+    @Operation(
+            summary = "내 정보 조회",
+            description = "인증된 사용자의 역할 및 프로필 정보를 반환합니다."
+    )
     public ResponseEntity<ApiResponse<UserMeData>> me(
             @AuthenticationPrincipal AuthenticatedUserPrincipal principal
     ) {
@@ -38,6 +45,10 @@ public class UserController {
     }
 
     @DeleteMapping("/me")
+    @Operation(
+            summary = "회원 탈퇴",
+            description = "인증된 사용자 계정과 연관 매핑 정보를 삭제합니다."
+    )
     public ResponseEntity<ApiResponse<Object>> withdraw(
             @AuthenticationPrincipal AuthenticatedUserPrincipal principal
     ) {
