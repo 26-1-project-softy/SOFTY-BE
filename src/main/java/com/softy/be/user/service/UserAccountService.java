@@ -116,9 +116,14 @@ public class UserAccountService {
         School school = schoolRepository.findByName(schoolName)
                 .orElseGet(() -> schoolRepository.save(School.create(schoolName)));
 
-        Classroom classroom = classroomRepository.save(
-                Classroom.create(request.grade(), request.classNumber(), school, user)
-        );
+        Classroom classroom = classroomRepository.findFirstByTeacherIdOrderByIdDesc(userId)
+                .map(existing -> {
+                    existing.updateClassInfo(request.grade(), request.classNumber(), school);
+                    return existing;
+                })
+                .orElseGet(() -> classroomRepository.save(
+                        Classroom.create(request.grade(), request.classNumber(), school, user)
+                ));
 
         String classCode = classCodeService.createClassCodeForClassroom(classroom);
         return new TeacherClassUpdateResult(classCode);
@@ -136,7 +141,7 @@ public class UserAccountService {
         Classroom classroom = classroomRepository.findFirstByTeacherIdOrderByIdDesc(userId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "교사 학급 정보를 찾을 수 없습니다"));
 
-        String classCode = classCodeRepository.findFirstByClassroomIdOrderByIdDesc(classroom.getId())
+        String classCode = classCodeRepository.findFirstByClassroomIdAndIsActiveTrueOrderByIdDesc(classroom.getId())
                 .map(ClassCode::getCode)
                 .orElse(null);
 
