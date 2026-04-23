@@ -26,6 +26,9 @@ public class ClassCode extends BaseEntity {
     @Column(nullable = false)
     private String code;
 
+    @Column(name = "is_active", nullable = false)
+    private boolean isActive;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "classroom_id", nullable = false)
     private Classroom classroom;
@@ -33,7 +36,12 @@ public class ClassCode extends BaseEntity {
     public static ClassCode create(String code, Classroom classroom) {
         ClassCode classCode = new ClassCode();
         classCode.code = code;
+        classCode.isActive = true;
         classCode.classroom = classroom;
         return classCode;
+    }
+
+    public void deactivate() {
+        this.isActive = false;
     }
 }
