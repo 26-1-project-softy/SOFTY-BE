@@ -42,7 +42,7 @@ public class ReportController {
         ApiResponse<ReportChatRoomListData> response = ApiResponse.of(
                 true,
                 200,
-                "Chat room list retrieved successfully.",
+                "채팅방 목록 조회에 성공했습니다.",
                 data
         );
 
@@ -66,7 +66,7 @@ public class ReportController {
         ApiResponse<ReportChatPreviewData> response = ApiResponse.of(
                 true,
                 200,
-                "Chat preview retrieved successfully.",
+                "채팅 미리보기 조회에 성공했습니다.",
                 data
         );
 
