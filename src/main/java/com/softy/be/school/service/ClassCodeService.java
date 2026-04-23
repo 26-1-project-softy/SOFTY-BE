@@ -22,6 +22,8 @@ public class ClassCodeService {
 
     @Transactional
     public String createClassCodeForClassroom(Classroom classroom) {
+        classCodeRepository.deactivateActiveCodesByClassroomId(classroom.getId());
+
         String code = generateUniqueClassCode();
         classCodeRepository.save(ClassCode.create(code, classroom));
         return code;
