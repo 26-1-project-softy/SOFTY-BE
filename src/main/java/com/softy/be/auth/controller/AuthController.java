@@ -14,6 +14,8 @@ import com.softy.be.auth.service.ParentSignupResult;
 import com.softy.be.auth.service.TeacherSignupResult;
 import com.softy.be.auth.security.AuthenticatedUserPrincipal;
 import com.softy.be.common.api.ApiResponse;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -26,11 +28,16 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @RequestMapping("/auth")
 @RequiredArgsConstructor
+@Tag(name = "인증", description = "사용자 로그인 및 회원가입 API")
 public class AuthController {
 
     private final AuthService authService;
 
     @PostMapping("/kakao/login")
+    @Operation(
+            summary = "카카오 액세스 토큰 로그인",
+            description = "카카오 액세스 토큰으로 로그인하고 서비스 토큰을 반환합니다."
+    )
     public ResponseEntity<ApiResponse<KakaoLoginData>> kakaoLogin(@RequestBody KakaoLoginRequest request) {
         KakaoLoginResult result = authService.loginWithKakaoAccessToken(
                 request == null ? null : request.kakaoAccessToken()
@@ -46,6 +53,10 @@ public class AuthController {
     }
 
     @PostMapping("/kakao/login/teacher")
+    @Operation(
+            summary = "교사 웹 카카오 로그인(인가 코드)",
+            description = "카카오 인가 코드를 교환해 로그인하고 서비스 토큰을 반환합니다."
+    )
     public ResponseEntity<ApiResponse<KakaoLoginData>> kakaoWebLogin(@RequestBody KakaoCodeLoginRequest request) {
         KakaoLoginResult result = authService.loginWithKakaoAuthorizationCode(
                 request == null ? null : request.authorizationCode(),
@@ -62,6 +73,10 @@ public class AuthController {
     }
 
     @PostMapping("/teachers/signup")
+    @Operation(
+            summary = "교사 회원가입 완료",
+            description = "인증된 사용자의 교사 회원가입을 진행합니다."
+    )
     public ResponseEntity<ApiResponse<SignupUserData>> signupTeacher(
             @AuthenticationPrincipal AuthenticatedUserPrincipal principal,
             @RequestBody TeacherSignupRequest request
@@ -80,6 +95,10 @@ public class AuthController {
     }
 
     @PostMapping("/parents/signup")
+    @Operation(
+            summary = "학부모 회원가입 완료",
+            description = "인증된 사용자의 학부모 회원가입을 진행합니다."
+    )
     public ResponseEntity<ApiResponse<SignupUserData>> signupParent(
             @AuthenticationPrincipal AuthenticatedUserPrincipal principal,
             @RequestBody ParentSignupRequest request
@@ -98,6 +117,10 @@ public class AuthController {
     }
 
     @PostMapping("/teachers/classcode")
+    @Operation(
+            summary = "교사 학급 코드 발급",
+            description = "학부모가 교사 학급에 연결할 때 사용할 학급 코드를 발급합니다."
+    )
     public ResponseEntity<ApiResponse<ClassCodeData>> createClassCode(
             @AuthenticationPrincipal AuthenticatedUserPrincipal principal
     ) {

@@ -43,4 +43,10 @@ public class Classroom extends BaseEntity {
         classroom.teacher = teacher;
         return classroom;
     }
+
+    public void updateClassInfo(int grade, int classNumber, School school) {
+        this.grade = grade;
+        this.classNumber = classNumber;
+        this.school = school;
+    }
 }

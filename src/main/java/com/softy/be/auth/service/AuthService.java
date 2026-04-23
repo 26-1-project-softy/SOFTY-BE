@@ -145,7 +145,7 @@ public class AuthService {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "이미 회원가입이 완료된 사용자입니다");
         }
 
-        ClassCode classCode = classCodeRepository.findFirstByCodeOrderByIdDesc(request.classCode().trim())
+        ClassCode classCode = classCodeRepository.findFirstByCodeAndIsActiveTrueOrderByIdDesc(request.classCode().trim())
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "유효한 학급 코드를 찾을 수 없습니다"));
 
         String studentName = request.studentName().trim();
