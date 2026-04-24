@@ -1,6 +1,8 @@
 package com.softy.be.admin.service;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
+import com.softy.be.admin.service.dto.AiEvaluationApiResponse;
+import com.softy.be.admin.service.dto.AiEvaluationRerunApiRequest;
+import com.softy.be.admin.service.dto.AiEvaluationRerunApiResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.web.client.RestTemplateBuilder;
@@ -11,11 +13,11 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.stereotype.Component;
-import org.springframework.web.util.UriComponentsBuilder;
 import org.springframework.web.client.HttpStatusCodeException;
 import org.springframework.web.client.ResourceAccessException;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.server.ResponseStatusException;
+import org.springframework.web.util.UriComponentsBuilder;
 
 import java.net.URI;
 import java.time.Duration;
@@ -180,51 +182,5 @@ public class AiEvaluationClient {
             String resultMessage,
             String contentType
     ) {
-    }
-
-    private record AiEvaluationRerunApiRequest(
-            String version,
-            @JsonProperty("dataset_version")
-            String datasetVersion
-    ) {
-    }
-
-    @SuppressWarnings("unused")
-    private static class AiEvaluationApiResponse {
-        @JsonProperty("evaluation_id")
-        public String evaluationId;
-
-        @JsonProperty("result_code")
-        public Integer resultCode;
-
-        @JsonProperty("result_msg")
-        public String resultMessage;
-
-        public String version;
-        public String status;
-        public Double precision;
-        public Double recall;
-
-        @JsonProperty("f1_score")
-        public Double f1Score;
-
-        public Boolean passed;
-    }
-
-    @SuppressWarnings("unused")
-    private static class AiEvaluationRerunApiResponse {
-        @JsonProperty("content_type")
-        public String contentType;
-
-        @JsonProperty("result_code")
-        public Integer resultCode;
-
-        @JsonProperty("result_msg")
-        public String resultMessage;
-
-        @JsonProperty("evaluation_id")
-        public String evaluationId;
-
-        public String status;
     }
 }
