@@ -36,7 +36,7 @@ public class AiEvaluationClient {
     private String aiServerBaseUrl;
 
     public AiEvaluationResult getEvaluation(String evaluationId) {
-        String normalizedEvaluationId = normalizeEvaluationId(evaluationId);
+        String normalizedEvaluationId = normalizeOptionalValue(evaluationId);
         URI uri = buildEvaluationUri(normalizedEvaluationId);
 
         RestTemplate restTemplate = buildRestTemplate();
@@ -75,12 +75,8 @@ public class AiEvaluationClient {
     }
 
     public AiEvaluationRerunResult requestRiskDetectionEvaluation(String version, String datasetVersion) {
-        if (version == null || version.isBlank()) {
-            throw new ResponseStatusException(BAD_REQUEST, "version은 필수입니다.");
-        }
-        if (datasetVersion == null || datasetVersion.isBlank()) {
-            throw new ResponseStatusException(BAD_REQUEST, "datasetVersion은 필수입니다.");
-        }
+        String normalizedVersion = normalizeOptionalValue(version);
+        String normalizedDatasetVersion = normalizeOptionalValue(datasetVersion);
 
         URI uri = URI.create(aiServerBaseUrl + "/ai/evaluations/risk-detection");
         RestTemplate restTemplate = buildRestTemplate();
@@ -89,8 +85,8 @@ public class AiEvaluationClient {
         headers.setContentType(MediaType.APPLICATION_JSON);
 
         AiEvaluationRerunApiRequest requestBody = new AiEvaluationRerunApiRequest(
-                version.trim(),
-                datasetVersion.trim()
+                normalizedVersion,
+                normalizedDatasetVersion
         );
         HttpEntity<AiEvaluationRerunApiRequest> requestEntity = new HttpEntity<>(requestBody, headers);
 
@@ -134,12 +130,12 @@ public class AiEvaluationClient {
                 .build();
     }
 
-    private String normalizeEvaluationId(String evaluationId) {
-        if (evaluationId == null) {
+    private String normalizeOptionalValue(String value) {
+        if (value == null) {
             return null;
         }
 
-        String normalized = evaluationId.trim();
+        String normalized = value.trim();
         return normalized.isEmpty() ? null : normalized;
     }
 
