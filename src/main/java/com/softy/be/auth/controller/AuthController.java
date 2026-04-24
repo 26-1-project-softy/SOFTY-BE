@@ -7,13 +7,14 @@ import com.softy.be.auth.dto.KakaoLoginRequest;
 import com.softy.be.auth.dto.ParentSignupRequest;
 import com.softy.be.auth.dto.SignupUserData;
 import com.softy.be.auth.dto.TeacherSignupRequest;
-import com.softy.be.auth.service.AuthService;
-import com.softy.be.auth.service.ClassCodeCreateResult;
-import com.softy.be.auth.service.KakaoLoginResult;
-import com.softy.be.auth.service.ParentSignupResult;
-import com.softy.be.auth.service.TeacherSignupResult;
 import com.softy.be.auth.security.AuthenticatedUserPrincipal;
+import com.softy.be.auth.service.AuthService;
+import com.softy.be.auth.service.KakaoLoginResult;
 import com.softy.be.common.api.ApiResponse;
+import com.softy.be.user.service.ClassCodeCreateResult;
+import com.softy.be.user.service.ParentSignupResult;
+import com.softy.be.user.service.TeacherSignupResult;
+import com.softy.be.user.service.UserRegistrationService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
@@ -28,10 +29,11 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @RequestMapping("/auth")
 @RequiredArgsConstructor
-@Tag(name = "인증", description = "사용자 로그인 및 회원가입 API")
+@Tag(name = "인증", description = "로그인 및 회원가입 API")
 public class AuthController {
 
     private final AuthService authService;
+    private final UserRegistrationService userRegistrationService;
 
     @PostMapping("/kakao/login")
     @Operation(
@@ -46,7 +48,7 @@ public class AuthController {
         ApiResponse<KakaoLoginData> response = ApiResponse.of(
                 true,
                 201,
-                "로그인에 성공 하였습니다.",
+                "로그인에 성공했습니다.",
                 new KakaoLoginData(result.accessToken(), result.refreshToken(), result.registrationRequired())
         );
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
@@ -54,7 +56,7 @@ public class AuthController {
 
     @PostMapping("/kakao/login/teacher")
     @Operation(
-            summary = "교사 웹 카카오 로그인(인가 코드)",
+            summary = "교사 웹 카카오 로그인",
             description = "카카오 인가 코드를 교환해 로그인하고 서비스 토큰을 반환합니다."
     )
     public ResponseEntity<ApiResponse<KakaoLoginData>> kakaoWebLogin(@RequestBody KakaoCodeLoginRequest request) {
@@ -82,7 +84,7 @@ public class AuthController {
             @RequestBody TeacherSignupRequest request
     ) {
         Long userId = principal.userId();
-        TeacherSignupResult result = authService.signupTeacher(userId, request);
+        TeacherSignupResult result = userRegistrationService.signupTeacher(userId, request);
 
         ApiResponse<SignupUserData> response = ApiResponse.of(
                 true,
@@ -104,7 +106,7 @@ public class AuthController {
             @RequestBody ParentSignupRequest request
     ) {
         Long userId = principal.userId();
-        ParentSignupResult result = authService.signupParent(userId, request);
+        ParentSignupResult result = userRegistrationService.signupParent(userId, request);
 
         ApiResponse<SignupUserData> response = ApiResponse.of(
                 true,
@@ -125,12 +127,12 @@ public class AuthController {
             @AuthenticationPrincipal AuthenticatedUserPrincipal principal
     ) {
         Long userId = principal.userId();
-        ClassCodeCreateResult result = authService.createTeacherClassCode(userId);
+        ClassCodeCreateResult result = userRegistrationService.createTeacherClassCode(userId);
 
         ApiResponse<ClassCodeData> response = ApiResponse.of(
                 true,
                 201,
-                "클래스 코드 발급이 완료되었습니다.",
+                "학급 코드 발급이 완료되었습니다.",
                 new ClassCodeData(result.classCode())
         );
 
