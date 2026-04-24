@@ -1,6 +1,8 @@
 package com.softy.be.admin.service;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
+import com.softy.be.admin.service.dto.AiEvaluationApiResponse;
+import com.softy.be.admin.service.dto.AiEvaluationRerunApiRequest;
+import com.softy.be.admin.service.dto.AiEvaluationRerunApiResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.web.client.RestTemplateBuilder;
@@ -15,6 +17,7 @@ import org.springframework.web.client.HttpStatusCodeException;
 import org.springframework.web.client.ResourceAccessException;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.server.ResponseStatusException;
+import org.springframework.web.util.UriComponentsBuilder;
 
 import java.net.URI;
 import java.time.Duration;
@@ -33,12 +36,8 @@ public class AiEvaluationClient {
     private String aiServerBaseUrl;
 
     public AiEvaluationResult getEvaluation(String evaluationId) {
-        if (evaluationId == null || evaluationId.isBlank()) {
-            throw new ResponseStatusException(BAD_REQUEST, "evaluationId는 필수입니다.");
-        }
-
-        String normalizedEvaluationId = evaluationId.trim();
-        URI uri = URI.create(aiServerBaseUrl + "/ai/evaluations/" + normalizedEvaluationId);
+        String normalizedEvaluationId = normalizeOptionalValue(evaluationId);
+        URI uri = buildEvaluationUri(normalizedEvaluationId);
 
         RestTemplate restTemplate = buildRestTemplate();
 
@@ -56,7 +55,7 @@ public class AiEvaluationClient {
             }
 
             return new AiEvaluationResult(
-                    normalizedEvaluationId,
+                    resolveResponseEvaluationId(normalizedEvaluationId, body.evaluationId),
                     body.precision,
                     body.recall,
                     body.f1Score,
@@ -76,12 +75,8 @@ public class AiEvaluationClient {
     }
 
     public AiEvaluationRerunResult requestRiskDetectionEvaluation(String version, String datasetVersion) {
-        if (version == null || version.isBlank()) {
-            throw new ResponseStatusException(BAD_REQUEST, "version은 필수입니다.");
-        }
-        if (datasetVersion == null || datasetVersion.isBlank()) {
-            throw new ResponseStatusException(BAD_REQUEST, "datasetVersion은 필수입니다.");
-        }
+        String normalizedVersion = normalizeOptionalValue(version);
+        String normalizedDatasetVersion = normalizeOptionalValue(datasetVersion);
 
         URI uri = URI.create(aiServerBaseUrl + "/ai/evaluations/risk-detection");
         RestTemplate restTemplate = buildRestTemplate();
@@ -90,8 +85,8 @@ public class AiEvaluationClient {
         headers.setContentType(MediaType.APPLICATION_JSON);
 
         AiEvaluationRerunApiRequest requestBody = new AiEvaluationRerunApiRequest(
-                version.trim(),
-                datasetVersion.trim()
+                normalizedVersion,
+                normalizedDatasetVersion
         );
         HttpEntity<AiEvaluationRerunApiRequest> requestEntity = new HttpEntity<>(requestBody, headers);
 
@@ -135,6 +130,34 @@ public class AiEvaluationClient {
                 .build();
     }
 
+    private String normalizeOptionalValue(String value) {
+        if (value == null) {
+            return null;
+        }
+
+        String normalized = value.trim();
+        return normalized.isEmpty() ? null : normalized;
+    }
+
+    private URI buildEvaluationUri(String evaluationId) {
+        UriComponentsBuilder builder = UriComponentsBuilder
+                .fromUriString(aiServerBaseUrl)
+                .path("/ai/evaluations");
+
+        if (evaluationId != null) {
+            builder.queryParam("evaluation_id", evaluationId);
+        }
+
+        return builder.build(true).toUri();
+    }
+
+    private String resolveResponseEvaluationId(String requestEvaluationId, String responseEvaluationId) {
+        if (responseEvaluationId != null && !responseEvaluationId.isBlank()) {
+            return responseEvaluationId;
+        }
+        return requestEvaluationId == null ? "" : requestEvaluationId;
+    }
+
     public record AiEvaluationResult(
             String evaluationId,
             Double precision,
@@ -155,48 +178,5 @@ public class AiEvaluationClient {
             String resultMessage,
             String contentType
     ) {
-    }
-
-    private record AiEvaluationRerunApiRequest(
-            String version,
-            @JsonProperty("dataset_version")
-            String datasetVersion
-    ) {
-    }
-
-    @SuppressWarnings("unused")
-    private static class AiEvaluationApiResponse {
-        @JsonProperty("result_code")
-        public Integer resultCode;
-
-        @JsonProperty("result_msg")
-        public String resultMessage;
-
-        public String version;
-        public String status;
-        public Double precision;
-        public Double recall;
-
-        @JsonProperty("f1_score")
-        public Double f1Score;
-
-        public Boolean passed;
-    }
-
-    @SuppressWarnings("unused")
-    private static class AiEvaluationRerunApiResponse {
-        @JsonProperty("content_type")
-        public String contentType;
-
-        @JsonProperty("result_code")
-        public Integer resultCode;
-
-        @JsonProperty("result_msg")
-        public String resultMessage;
-
-        @JsonProperty("evaluation_id")
-        public String evaluationId;
-
-        public String status;
     }
 }
