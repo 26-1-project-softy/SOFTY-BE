@@ -11,6 +11,7 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.stereotype.Component;
+import org.springframework.web.util.UriComponentsBuilder;
 import org.springframework.web.client.HttpStatusCodeException;
 import org.springframework.web.client.ResourceAccessException;
 import org.springframework.web.client.RestTemplate;
@@ -33,12 +34,8 @@ public class AiEvaluationClient {
     private String aiServerBaseUrl;
 
     public AiEvaluationResult getEvaluation(String evaluationId) {
-        if (evaluationId == null || evaluationId.isBlank()) {
-            throw new ResponseStatusException(BAD_REQUEST, "evaluationId는 필수입니다.");
-        }
-
-        String normalizedEvaluationId = evaluationId.trim();
-        URI uri = URI.create(aiServerBaseUrl + "/ai/evaluations/" + normalizedEvaluationId);
+        String normalizedEvaluationId = normalizeEvaluationId(evaluationId);
+        URI uri = buildEvaluationUri(normalizedEvaluationId);
 
         RestTemplate restTemplate = buildRestTemplate();
 
@@ -56,7 +53,7 @@ public class AiEvaluationClient {
             }
 
             return new AiEvaluationResult(
-                    normalizedEvaluationId,
+                    resolveResponseEvaluationId(normalizedEvaluationId, body.evaluationId),
                     body.precision,
                     body.recall,
                     body.f1Score,
@@ -135,6 +132,34 @@ public class AiEvaluationClient {
                 .build();
     }
 
+    private String normalizeEvaluationId(String evaluationId) {
+        if (evaluationId == null) {
+            return null;
+        }
+
+        String normalized = evaluationId.trim();
+        return normalized.isEmpty() ? null : normalized;
+    }
+
+    private URI buildEvaluationUri(String evaluationId) {
+        UriComponentsBuilder builder = UriComponentsBuilder
+                .fromUriString(aiServerBaseUrl)
+                .path("/ai/evaluations");
+
+        if (evaluationId != null) {
+            builder.queryParam("evaluation_id", evaluationId);
+        }
+
+        return builder.build(true).toUri();
+    }
+
+    private String resolveResponseEvaluationId(String requestEvaluationId, String responseEvaluationId) {
+        if (responseEvaluationId != null && !responseEvaluationId.isBlank()) {
+            return responseEvaluationId;
+        }
+        return requestEvaluationId == null ? "" : requestEvaluationId;
+    }
+
     public record AiEvaluationResult(
             String evaluationId,
             Double precision,
@@ -166,6 +191,9 @@ public class AiEvaluationClient {
 
     @SuppressWarnings("unused")
     private static class AiEvaluationApiResponse {
+        @JsonProperty("evaluation_id")
+        public String evaluationId;
+
         @JsonProperty("result_code")
         public Integer resultCode;
 

@@ -1,8 +1,8 @@
 package com.softy.be.admin.service;
 
-import com.softy.be.admin.dto.AdminPdfStatisticsData;
 import com.softy.be.admin.dto.AdminEvaluationRerunData;
 import com.softy.be.admin.dto.AdminEvaluationRerunRequest;
+import com.softy.be.admin.dto.AdminPdfStatisticsData;
 import com.softy.be.admin.dto.AdminPerformanceStatisticsData;
 import com.softy.be.admin.dto.AdminRecommendationAdoptionData;
 import com.softy.be.admin.dto.AdminRiskStatisticsData;
@@ -70,8 +70,7 @@ public class AdminStatisticsService {
 
     @Transactional(readOnly = true)
     public AdminPerformanceStatisticsData getPerformanceStatistics(String evaluationId) {
-        String resolvedEvaluationId = resolveEvaluationId(evaluationId);
-        AiEvaluationClient.AiEvaluationResult result = aiEvaluationClient.getEvaluation(resolvedEvaluationId);
+        AiEvaluationClient.AiEvaluationResult result = aiEvaluationClient.getEvaluation(evaluationId);
 
         return new AdminPerformanceStatisticsData(
                 result.evaluationId(),
@@ -106,19 +105,6 @@ public class AdminStatisticsService {
                 resolvedVersion,
                 resolvedDatasetVersion
         );
-    }
-
-    private String resolveEvaluationId(String evaluationId) {
-        if (evaluationId != null && !evaluationId.isBlank()) {
-            return evaluationId.trim();
-        }
-
-        return modelTrainingHistoryRepository.findLatestEvaluationIds(PageRequest.of(0, 1))
-                .stream()
-                .findFirst()
-                .orElseThrow(
-                () -> new ResponseStatusException(NOT_FOUND, "성능 통계 조회에 사용할 evaluationId가 없습니다.")
-                );
     }
 
     private String resolveVersion(AdminEvaluationRerunRequest request, LatestModelVersionRow latestModelVersion) {
