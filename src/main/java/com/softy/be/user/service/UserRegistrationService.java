@@ -51,14 +51,12 @@ public class UserRegistrationService {
         School school = schoolRepository.findByName(request.schoolName().trim())
                 .orElseGet(() -> schoolRepository.save(School.create(request.schoolName().trim())));
 
-        Classroom classroom = classroomRepository.save(
+        classroomRepository.save(
                 Classroom.create(request.grade(), request.classNumber(), school, user)
         );
 
-        String code = classCodeService.createClassCodeForClassroom(classroom);
-
         user.completeTeacherSignup(request.teacherName().trim());
-        return new TeacherSignupResult(user.getId(), user.getRole(), code);
+        return new TeacherSignupResult(user.getId(), user.getRole());
     }
 
     @Transactional
