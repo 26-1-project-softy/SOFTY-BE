@@ -18,33 +18,48 @@ public interface AiRecommendationRepository extends JpaRepository<AiRecommendati
             """)
     long countTeacherRecommendations();
 
-    @Query("""
-            SELECT COUNT(ar)
-            FROM AiRecommendation ar
-            JOIN ar.message m
-            JOIN m.sender s
-            WHERE UPPER(s.role) = 'TEACHER'
+    @Query(value = """
+            SELECT COUNT(ar.id)
+            FROM ai_recommendation ar
+            JOIN message m ON m.id = ar.message_id
+            JOIN users u ON u.id = m.sender_id
+            WHERE UPPER(u.role) = 'TEACHER'
               AND ar.content IS NOT NULL
-              AND m.modifyContent IS NOT NULL
-              AND m.modifyContent = ar.content
-            """)
+              AND ar.embedding IS NOT NULL
+            """, nativeQuery = true)
+    long countTeacherEmbeddedRecommendations();
+
+    @Query(value = """
+            SELECT COUNT(ar.id)
+            FROM ai_recommendation ar
+            JOIN message m ON m.id = ar.message_id
+            JOIN users u ON u.id = m.sender_id
+            WHERE UPPER(u.role) = 'TEACHER'
+              AND ar.content IS NOT NULL
+              AND ar.embedding IS NOT NULL
+              AND COALESCE(ar.is_recommendation_used, FALSE) = TRUE
+              AND m.modify_content IS NOT NULL
+              AND m.modify_content = ar.content
+            """, nativeQuery = true)
     long countTeacherRecommendationsUsedAsIs();
 
-    @Query("""
-            SELECT COUNT(ar)
-            FROM AiRecommendation ar
-            JOIN ar.message m
-            JOIN m.sender s
-            WHERE UPPER(s.role) = 'TEACHER'
+    @Query(value = """
+            SELECT COUNT(ar.id)
+            FROM ai_recommendation ar
+            JOIN message m ON m.id = ar.message_id
+            JOIN users u ON u.id = m.sender_id
+            WHERE UPPER(u.role) = 'TEACHER'
               AND ar.content IS NOT NULL
+              AND ar.embedding IS NOT NULL
+              AND COALESCE(ar.is_recommendation_used, FALSE) = TRUE
               AND NOT (
-                    m.modifyContent IS NOT NULL
-                    AND m.modifyContent = ar.content
+                    m.modify_content IS NOT NULL
+                    AND m.modify_content = ar.content
               )
-              AND m.similarityModified IS NOT NULL
-              AND m.similarityOriginal IS NOT NULL
-              AND m.similarityModified > m.similarityOriginal
-            """)
+              AND m.similarity_modified IS NOT NULL
+              AND m.similarity_original IS NOT NULL
+              AND m.similarity_modified >= m.similarity_original
+            """, nativeQuery = true)
     long countTeacherRecommendationsModified();
 
     @Query(value = """
@@ -56,13 +71,24 @@ public interface AiRecommendationRepository extends JpaRepository<AiRecommendati
               AND ar.content IS NOT NULL
               AND ar.embedding IS NOT NULL
               AND NOT (
-                    m.modify_content IS NOT NULL
+                    COALESCE(ar.is_recommendation_used, FALSE) = TRUE
+                    AND m.modify_content IS NOT NULL
                     AND m.modify_content = ar.content
               )
+              AND (
+                    COALESCE(ar.is_recommendation_used, FALSE) = FALSE
+                    OR (
+                        COALESCE(ar.is_recommendation_used, FALSE) = TRUE
+                        AND m.similarity_modified IS NOT NULL
+                        AND m.similarity_original IS NOT NULL
+                        AND m.similarity_modified < m.similarity_original
+                    )
+              )
               AND NOT (
-                    m.similarity_modified IS NOT NULL
+                    COALESCE(ar.is_recommendation_used, FALSE) = TRUE
+                    AND m.similarity_modified IS NOT NULL
                     AND m.similarity_original IS NOT NULL
-                    AND m.similarity_modified > m.similarity_original
+                    AND m.similarity_modified >= m.similarity_original
               )
             """, nativeQuery = true)
     long countTeacherRecommendationsNotUsed();
