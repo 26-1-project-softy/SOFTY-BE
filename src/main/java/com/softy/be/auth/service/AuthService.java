@@ -99,7 +99,7 @@ public class AuthService {
                 .orElseGet(() -> createKakaoAccount(profile));
 
         User user = socialAccount.getUser();
-        if (!Objects.equals(user.getName(), profile.nickname())) {
+        if (isRegistrationRequired(user.getRole()) && !Objects.equals(user.getName(), profile.nickname())) {
             user.updateName(profile.nickname());
         }
         return user;
