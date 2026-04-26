@@ -15,11 +15,7 @@ public interface PdfFileRepository extends JpaRepository<PdfFile, Long> {
                         u.name AS teacherName,
                         COUNT(pf.id) AS pdfCount
                     FROM pdf_file pf
-                    JOIN (
-                        SELECT DISTINCT chat_room_id, user_id
-                        FROM chat_room_user_map
-                    ) crm ON crm.chat_room_id = pf.chat_room_id
-                    JOIN users u ON u.id = crm.user_id
+                    JOIN users u ON u.id = pf.created_by
                     WHERE UPPER(u.role) = 'TEACHER'
                     GROUP BY u.id, u.name
                     ORDER BY COUNT(pf.id) DESC, u.name ASC, u.id ASC
