@@ -111,7 +111,7 @@ public class ReportService {
             messages.add(new ReportChatPreviewMessageItemData(
                     message.getId(),
                     message.getSender().getId().equals(userId),
-                    nullToEmpty(message.getContent()),
+                    message.resolveReportContent(),
                     message.getCreatedAt()
             ));
         }
