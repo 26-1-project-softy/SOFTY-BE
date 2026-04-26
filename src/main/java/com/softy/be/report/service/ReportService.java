@@ -140,7 +140,7 @@ public class ReportService {
 
     @Transactional
     public ReportPdfCreateData createPdf(Long userId, Long chatRoomId) {
-        getTeacherOrThrow(userId);
+        User teacher = getTeacherOrThrow(userId);
         ChatRoom chatRoom = chatRoomRepository.findById(chatRoomId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "채팅방을 찾을 수 없습니다"));
 
@@ -154,7 +154,7 @@ public class ReportService {
         String objectKey = reportS3StorageService.buildObjectKey(chatRoomId, objectFileName);
         String s3Uri = reportS3StorageService.uploadPdf(objectKey, pdfBytes);
 
-        PdfFile pdfFile = pdfFileRepository.save(PdfFile.create(chatRoom, s3Uri, displayFileName));
+        PdfFile pdfFile = pdfFileRepository.save(PdfFile.create(chatRoom, teacher, s3Uri, displayFileName));
         String downloadUrl = reportS3StorageService.createDownloadUrl(objectKey);
 
         return new ReportPdfCreateData(

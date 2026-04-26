@@ -45,11 +45,11 @@
 - `data.list`: 교사별 PDF 생성 수 목록
   - `teacherId`: 교사 사용자 ID
   - `teacherName`: 교사명
-  - `pdfCount`: 해당 교사의 PDF 생성 수
+  - `pdfCount`: 해당 교사가 직접 생성한 PDF 수
 
 ## 집계 기준
 - 소스 테이블: `pdf_file`
-- 교사 매핑: `chat_room_user_map` + `users(role='TEACHER')`
+- 교사 매핑: `pdf_file.created_by` + `users(role='TEACHER')`
 - 정렬: `pdfCount DESC`, `teacherName ASC`, `teacherId ASC`
 
 ## 오류 응답

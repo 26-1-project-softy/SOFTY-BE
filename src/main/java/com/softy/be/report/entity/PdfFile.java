@@ -2,6 +2,7 @@ package com.softy.be.report.entity;
 
 import com.softy.be.chat.entity.ChatRoom;
 import com.softy.be.common.entity.BaseEntity;
+import com.softy.be.user.entity.User;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
@@ -34,9 +35,14 @@ public class PdfFile extends BaseEntity {
     @Column(name = "file_name", nullable = false)
     private String fileName;
 
-    public static PdfFile create(ChatRoom chatRoom, String fileUrl, String fileName) {
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "created_by", nullable = false)
+    private User createdBy;
+
+    public static PdfFile create(ChatRoom chatRoom, User createdBy, String fileUrl, String fileName) {
         PdfFile pdfFile = new PdfFile();
         pdfFile.chatRoom = chatRoom;
+        pdfFile.createdBy = createdBy;
         pdfFile.fileUrl = fileUrl;
         pdfFile.fileName = fileName;
         return pdfFile;
