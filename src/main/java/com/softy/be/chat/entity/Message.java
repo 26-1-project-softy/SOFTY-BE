@@ -42,4 +42,18 @@ public class Message extends BaseEntity {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "sender_id")
     private User sender;
+
+    public String resolveReportContent() {
+        if (hasText(modifyContent)) {
+            return modifyContent.trim();
+        }
+        if (hasText(content)) {
+            return content.trim();
+        }
+        return "";
+    }
+
+    private boolean hasText(String value) {
+        return value != null && !value.trim().isEmpty();
+    }
 }

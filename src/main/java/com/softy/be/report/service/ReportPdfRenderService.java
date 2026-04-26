@@ -53,7 +53,7 @@ public class ReportPdfRenderService {
                 for (Message message : messages) {
                     String sender = message.getSender() == null ? "알 수 없음" : safe(message.getSender().getName());
                     String ts = message.getCreatedAt() == null ? "-" : message.getCreatedAt().format(TS_FORMATTER);
-                    String content = resolveContent(message);
+                    String content = message.resolveReportContent();
                     lines.add(String.format("[%s] %s: %s", ts, sender, content));
                 }
             }
@@ -86,20 +86,6 @@ public class ReportPdfRenderService {
         } catch (IOException e) {
             throw new IllegalStateException("PDF 생성에 실패했습니다.", e);
         }
-    }
-
-    private String resolveContent(Message message) {
-        if (hasText(message.getModifyContent())) {
-            return message.getModifyContent().trim();
-        }
-        if (hasText(message.getContent())) {
-            return message.getContent().trim();
-        }
-        return "";
-    }
-
-    private boolean hasText(String value) {
-        return value != null && !value.trim().isEmpty();
     }
 
     private String safe(String value) {
