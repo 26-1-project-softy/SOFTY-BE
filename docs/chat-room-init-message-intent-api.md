@@ -42,7 +42,8 @@
   "code": 200,
   "message": "의도 분석에 성공했습니다.",
   "data": {
-    "intentLabel": "문의"
+    "intentLabel": "문의",
+    "isInWorkingHours": true
   }
 }
 ```
@@ -55,10 +56,18 @@
   "code": 200,
   "message": "의도 분석을 완료했습니다.",
   "data": {
-    "intentLabel": null
+    "intentLabel": null,
+    "isInWorkingHours": false
   }
 }
 ```
+
+## 응답 필드
+
+- `data.intentLabel` (String, nullable)
+  - AI가 분석한 의도 태그
+- `data.isInWorkingHours` (boolean)
+  - 현재 시각이 담임 교사의 근무시간에 포함되는지 여부
 
 ## 오류 응답
 

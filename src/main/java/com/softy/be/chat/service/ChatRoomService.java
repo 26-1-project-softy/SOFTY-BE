@@ -12,7 +12,9 @@ import com.softy.be.chat.repository.ChatRoomRepository;
 import com.softy.be.chat.repository.ChatRoomUserMapRepository;
 import com.softy.be.chat.repository.MessageRepository;
 import com.softy.be.school.entity.ParentStudent;
+import com.softy.be.school.entity.TeacherSetting;
 import com.softy.be.school.repository.ParentStudentRepository;
+import com.softy.be.school.repository.TeacherSettingRepository;
 import com.softy.be.user.entity.User;
 import com.softy.be.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
@@ -21,7 +23,11 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.time.DayOfWeek;
 import java.time.LocalDateTime;
+import java.time.LocalTime;
+import java.time.ZoneId;
+import java.util.List;
 
 @Service
 @RequiredArgsConstructor
@@ -29,9 +35,11 @@ public class ChatRoomService {
 
     private static final String ROLE_PARENT = "PARENT";
     private static final String MESSAGE_TYPE_TEXT = "TEXT";
+    private static final ZoneId SEOUL_ZONE_ID = ZoneId.of("Asia/Seoul");
 
     private final UserRepository userRepository;
     private final ParentStudentRepository parentStudentRepository;
+    private final TeacherSettingRepository teacherSettingRepository;
     private final ChatRoomRepository chatRoomRepository;
     private final ChatRoomUserMapRepository chatRoomUserMapRepository;
     private final MessageRepository messageRepository;
@@ -40,10 +48,11 @@ public class ChatRoomService {
     @Transactional(readOnly = true)
     public InitMessageIntentData analyzeInitMessageIntent(Long userId, InitMessageIntentRequest request) {
         validateIntentRequest(request);
-        resolveParentTeacherLink(userId);
+        ParentTeacherLink link = resolveParentTeacherLink(userId);
 
         String intentLabel = intentClassificationClient.classifyIntent(request.content().trim());
-        return new InitMessageIntentData(intentLabel);
+        boolean isInWorkingHours = isTeacherInWorkingHours(link.teacher().getId());
+        return new InitMessageIntentData(intentLabel, isInWorkingHours);
     }
 
     @Transactional
@@ -116,6 +125,25 @@ public class ChatRoomService {
 
     private boolean isBlank(String value) {
         return value == null || value.trim().isEmpty();
+    }
+
+    private boolean isTeacherInWorkingHours(Long teacherId) {
+        List<TeacherSetting> settings = teacherSettingRepository.findByTeacherIdOrderByDayOfWeekAscIdAsc(teacherId);
+        if (settings.isEmpty()) {
+            return false;
+        }
+
+        LocalDateTime now = LocalDateTime.now(SEOUL_ZONE_ID);
+        DayOfWeek currentDayOfWeek = now.getDayOfWeek();
+        LocalTime currentTime = now.toLocalTime();
+
+        return settings.stream()
+                .filter(setting -> setting.getDayOfWeek() == currentDayOfWeek.getValue())
+                .anyMatch(setting -> {
+                    LocalTime startTime = setting.getStartTime().toLocalTime();
+                    LocalTime endTime = setting.getEndTime().toLocalTime();
+                    return !currentTime.isBefore(startTime) && currentTime.isBefore(endTime);
+                });
     }
 
     private record ParentTeacherLink(
