@@ -2,7 +2,9 @@ package com.softy.be.admin.controller;
 
 import com.softy.be.admin.dto.AdminEvaluationRerunData;
 import com.softy.be.admin.dto.AdminEvaluationRerunRequest;
+import com.softy.be.admin.dto.AdminLatestModelData;
 import com.softy.be.admin.dto.AdminPerformanceStatisticsData;
+import com.softy.be.admin.service.AdminModelService;
 import com.softy.be.admin.service.AdminStatisticsService;
 import com.softy.be.common.api.ApiResponse;
 import io.swagger.v3.oas.annotations.Operation;
@@ -22,7 +24,25 @@ import org.springframework.web.bind.annotation.RestController;
 @Tag(name = "관리자 모델 평가", description = "관리자 AI 모델 평가 API")
 public class AdminModelController {
 
+    private final AdminModelService adminModelService;
     private final AdminStatisticsService adminStatisticsService;
+
+    @GetMapping("/latest")
+    @Operation(
+            summary = "최신 모델 정보 조회",
+            description = "AI 서버의 최신 학습 작업 정보를 조회해 관리자 화면용 모델 정보로 반환합니다."
+    )
+    public ResponseEntity<ApiResponse<AdminLatestModelData>> getLatestModel() {
+        AdminLatestModelData data = adminModelService.getLatestModel();
+
+        ApiResponse<AdminLatestModelData> response = ApiResponse.of(
+                true,
+                200,
+                "모델 정보 조회 성공",
+                data
+        );
+        return ResponseEntity.ok(response);
+    }
 
     @GetMapping("/latest/evaluation")
     @Operation(
