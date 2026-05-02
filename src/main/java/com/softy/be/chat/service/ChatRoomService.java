@@ -5,6 +5,7 @@ import com.softy.be.chat.dto.InitMessageIntentRequest;
 import com.softy.be.chat.dto.InitMessageSendData;
 import com.softy.be.chat.dto.InitMessageSendRequest;
 import com.softy.be.chat.entity.ChatRoom;
+import com.softy.be.chat.entity.ChatRoomStatus;
 import com.softy.be.chat.entity.ChatRoomUserMap;
 import com.softy.be.chat.entity.Message;
 import com.softy.be.chat.repository.ChatRoomRepository;
@@ -27,7 +28,6 @@ import java.time.LocalDateTime;
 public class ChatRoomService {
 
     private static final String ROLE_PARENT = "PARENT";
-    private static final String CHAT_ROOM_STATUS_OPEN = "OPEN";
     private static final String MESSAGE_TYPE_TEXT = "TEXT";
 
     private final UserRepository userRepository;
@@ -54,7 +54,10 @@ public class ChatRoomService {
         User parent = link.parent();
         User teacher = link.teacher();
 
-        ChatRoom chatRoom = chatRoomRepository.save(ChatRoom.create(request.intentLabel().trim(), CHAT_ROOM_STATUS_OPEN));
+        ChatRoom chatRoom = chatRoomRepository.save(ChatRoom.create(
+                request.intentLabel().trim(),
+                ChatRoomStatus.IN_PROGRESS
+        ));
 
         LocalDateTime now = LocalDateTime.now();
         chatRoomUserMapRepository.save(ChatRoomUserMap.create(chatRoom, parent, 0, now));
