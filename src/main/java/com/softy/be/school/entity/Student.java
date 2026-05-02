@@ -40,4 +40,8 @@ public class Student extends BaseEntity {
         student.classroom = classroom;
         return student;
     }
+
+    public void updateClassroom(Classroom classroom) {
+        this.classroom = classroom;
+    }
 }

@@ -4,9 +4,12 @@ import com.softy.be.auth.security.AuthenticatedUserPrincipal;
 import com.softy.be.common.api.ApiResponse;
 import com.softy.be.user.dto.ParentClassPreviewData;
 import com.softy.be.user.dto.ParentClassPreviewRequest;
+import com.softy.be.user.dto.ParentClassUpdateData;
+import com.softy.be.user.dto.ParentClassUpdateRequest;
 import com.softy.be.user.dto.ParentSettingData;
 import com.softy.be.user.dto.ParentSettingScheduleData;
 import com.softy.be.user.service.ParentClassPreviewResult;
+import com.softy.be.user.service.ParentClassUpdateResult;
 import com.softy.be.user.service.ParentSettingResult;
 import com.softy.be.user.service.UserAccountService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -15,6 +18,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -48,6 +52,32 @@ public class ParentController {
                 "학급 코드 확인이 완료되었습니다.",
                 new ParentClassPreviewData(
                         result.classCode(),
+                        result.schoolName(),
+                        result.grade(),
+                        result.classNumber()
+                )
+        );
+
+        return ResponseEntity.ok(response);
+    }
+
+    @PatchMapping("/me/class")
+    @Operation(
+            summary = "학부모 학급 변경",
+            description = "학급 코드로 학부모의 자녀 학급을 실제로 변경합니다."
+    )
+    public ResponseEntity<ApiResponse<ParentClassUpdateData>> updateClass(
+            @AuthenticationPrincipal AuthenticatedUserPrincipal principal,
+            @RequestBody ParentClassUpdateRequest request
+    ) {
+        Long userId = principal.userId();
+        ParentClassUpdateResult result = userAccountService.updateParentClass(userId, request);
+
+        ApiResponse<ParentClassUpdateData> response = ApiResponse.of(
+                true,
+                200,
+                "학급이 변경되었습니다.",
+                new ParentClassUpdateData(
                         result.schoolName(),
                         result.grade(),
                         result.classNumber()
