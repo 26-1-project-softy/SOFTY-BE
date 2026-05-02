@@ -13,6 +13,98 @@ public interface ChatRoomRepository extends JpaRepository<ChatRoom, Long> {
 
     @Query(
             value = """
+                    SELECT
+                        cr.id AS chatRoomId,
+                        COALESCE(
+                            (
+                                SELECT pu.name
+                                FROM chat_room_user_map crm2
+                                JOIN users pu ON pu.id = crm2.user_id
+                                WHERE crm2.chat_room_id = cr.id
+                                  AND UPPER(pu.role) = 'PARENT'
+                                ORDER BY crm2.id DESC
+                                LIMIT 1
+                            ),
+                            ''
+                        ) AS counterpartName,
+                        COALESCE(
+                            (
+                                SELECT s.name
+                                FROM parent_student ps
+                                JOIN student s ON s.id = ps.student_id
+                                WHERE ps.parent_id = (
+                                    SELECT pu2.id
+                                    FROM chat_room_user_map crm3
+                                    JOIN users pu2 ON pu2.id = crm3.user_id
+                                    WHERE crm3.chat_room_id = cr.id
+                                      AND UPPER(pu2.role) = 'PARENT'
+                                    ORDER BY crm3.id DESC
+                                    LIMIT 1
+                                )
+                                ORDER BY ps.id DESC
+                                LIMIT 1
+                            ),
+                            ''
+                        ) AS studentName,
+                        cr.intent_label AS intentLabel,
+                        cr.status AS status
+                    FROM chat_room cr
+                    JOIN chat_room_user_map my_map
+                      ON my_map.chat_room_id = cr.id
+                     AND my_map.user_id = :teacherId
+                    WHERE cr.id = :chatRoomId
+                    """,
+            nativeQuery = true
+    )
+    ChatRoomDetailRow findChatRoomDetailByTeacherIdAndChatRoomId(
+            @Param("teacherId") Long teacherId,
+            @Param("chatRoomId") Long chatRoomId
+    );
+
+    @Query(
+            value = """
+                    SELECT
+                        cr.id AS chatRoomId,
+                        COALESCE(
+                            (
+                                SELECT tu.name
+                                FROM chat_room_user_map crm2
+                                JOIN users tu ON tu.id = crm2.user_id
+                                WHERE crm2.chat_room_id = cr.id
+                                  AND UPPER(tu.role) = 'TEACHER'
+                                ORDER BY crm2.id DESC
+                                LIMIT 1
+                            ),
+                            ''
+                        ) AS counterpartName,
+                        COALESCE(
+                            (
+                                SELECT s.name
+                                FROM parent_student ps
+                                JOIN student s ON s.id = ps.student_id
+                                WHERE ps.parent_id = :parentId
+                                ORDER BY ps.id DESC
+                                LIMIT 1
+                            ),
+                            ''
+                        ) AS studentName,
+                        cr.intent_label AS intentLabel,
+                        cr.status AS status
+                    FROM chat_room cr
+                    JOIN chat_room_user_map my_map
+                      ON my_map.chat_room_id = cr.id
+                     AND my_map.user_id = :parentId
+                    WHERE cr.id = :chatRoomId
+                    """,
+            nativeQuery = true
+    )
+    ChatRoomDetailRow findChatRoomDetailByParentIdAndChatRoomId(
+            @Param("parentId") Long parentId,
+            @Param("chatRoomId") Long chatRoomId
+    );
+
+    @Query(
+            value = """
                     WITH latest_message AS (
                         SELECT
                             x.chat_room_id,

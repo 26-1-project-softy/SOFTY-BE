@@ -1,5 +1,6 @@
 package com.softy.be.chat.service;
 
+import com.softy.be.chat.dto.ChatRoomDetailData;
 import com.softy.be.chat.dto.ChatRoomListData;
 import com.softy.be.chat.dto.ChatRoomListItemData;
 import com.softy.be.chat.dto.InitMessageIntentData;
@@ -10,6 +11,7 @@ import com.softy.be.chat.entity.ChatRoom;
 import com.softy.be.chat.entity.ChatRoomStatus;
 import com.softy.be.chat.entity.ChatRoomUserMap;
 import com.softy.be.chat.entity.Message;
+import com.softy.be.chat.repository.ChatRoomDetailRow;
 import com.softy.be.chat.repository.ChatRoomListRow;
 import com.softy.be.chat.repository.ChatRoomRepository;
 import com.softy.be.chat.repository.ChatRoomUserMapRepository;
@@ -50,6 +52,44 @@ public class ChatRoomService {
     private final ChatRoomUserMapRepository chatRoomUserMapRepository;
     private final MessageRepository messageRepository;
     private final IntentClassificationClient intentClassificationClient;
+
+    @Transactional(readOnly = true)
+    public ChatRoomDetailData getChatRoomDetail(Long userId, Long chatRoomId) {
+        if (chatRoomId == null || chatRoomId <= 0) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "chatRoomId는 1 이상이어야 합니다.");
+        }
+
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "사용자를 찾을 수 없습니다."));
+
+        if (!ROLE_TEACHER.equalsIgnoreCase(user.getRole()) && !ROLE_PARENT.equalsIgnoreCase(user.getRole())) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "학부모 또는 교사 계정만 조회할 수 있습니다.");
+        }
+
+        chatRoomRepository.findById(chatRoomId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "채팅방을 찾을 수 없습니다."));
+
+        boolean hasAccess = chatRoomRepository.existsParticipantByChatRoomIdAndUserId(chatRoomId, userId);
+        if (!hasAccess) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "해당 채팅방에 접근할 권한이 없습니다.");
+        }
+
+        ChatRoomDetailRow row = ROLE_TEACHER.equalsIgnoreCase(user.getRole())
+                ? chatRoomRepository.findChatRoomDetailByTeacherIdAndChatRoomId(userId, chatRoomId)
+                : chatRoomRepository.findChatRoomDetailByParentIdAndChatRoomId(userId, chatRoomId);
+
+        if (row == null) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "채팅방 상세 정보를 찾을 수 없습니다.");
+        }
+
+        return new ChatRoomDetailData(
+                row.getChatRoomId(),
+                nullToEmpty(row.getCounterpartName()),
+                nullToEmpty(row.getStudentName()),
+                nullToEmpty(row.getIntentLabel()),
+                nullToEmpty(row.getStatus())
+        );
+    }
 
     @Transactional(readOnly = true)
     public ChatRoomListData getChatRooms(Long userId, Long cursor, int size) {
@@ -138,7 +178,7 @@ public class ChatRoomService {
         if (mapping.getStudent() == null
                 || mapping.getStudent().getClassroom() == null
                 || mapping.getStudent().getClassroom().getTeacher() == null) {
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "담당 교사 정보를 찾을 수 없습니다.");
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "해당 교사 정보를 찾을 수 없습니다.");
         }
 
         return new ParentTeacherLink(parent, mapping.getStudent().getClassroom().getTeacher());
