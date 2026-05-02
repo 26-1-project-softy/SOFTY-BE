@@ -222,6 +222,7 @@ public class UserAccountService {
 
         String schoolName = classroom.getSchool() == null ? null : classroom.getSchool().getName();
         return new ParentClassPreviewResult(
+                classCode.getCode(),
                 schoolName,
                 classroom.getGrade(),
                 classroom.getClassNumber()

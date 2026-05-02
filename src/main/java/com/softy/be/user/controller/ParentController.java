@@ -47,6 +47,7 @@ public class ParentController {
                 200,
                 "학급 코드 확인이 완료되었습니다.",
                 new ParentClassPreviewData(
+                        result.classCode(),
                         result.schoolName(),
                         result.grade(),
                         result.classNumber()
