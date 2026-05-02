@@ -3,6 +3,7 @@ package com.softy.be.chat.controller;
 import com.softy.be.auth.security.AuthenticatedUserPrincipal;
 import com.softy.be.chat.dto.ChatRoomDetailData;
 import com.softy.be.chat.dto.ChatRoomListData;
+import com.softy.be.chat.dto.ChatRoomMessageListData;
 import com.softy.be.chat.dto.InitMessageIntentData;
 import com.softy.be.chat.dto.InitMessageIntentRequest;
 import com.softy.be.chat.dto.InitMessageSendData;
@@ -45,6 +46,29 @@ public class ChatRoomController {
                 true,
                 200,
                 "채팅방 상세 정보 조회에 성공했습니다.",
+                data
+        );
+
+        return ResponseEntity.ok(response);
+    }
+
+    @GetMapping("/{chatRoomId}/messages")
+    @Operation(
+            summary = "채팅방 메시지 목록 조회",
+            description = "로그인한 학부모 또는 교사가 참여 중인 특정 채팅방의 메시지 목록을 커서 기반으로 조회합니다."
+    )
+    public ResponseEntity<ApiResponse<ChatRoomMessageListData>> getChatRoomMessages(
+            @AuthenticationPrincipal AuthenticatedUserPrincipal principal,
+            @PathVariable("chatRoomId") Long chatRoomId,
+            @RequestParam(value = "cursor", required = false) Long cursor,
+            @RequestParam(value = "size", defaultValue = "30") int size
+    ) {
+        ChatRoomMessageListData data = chatRoomService.getChatRoomMessages(principal.userId(), chatRoomId, cursor, size);
+
+        ApiResponse<ChatRoomMessageListData> response = ApiResponse.of(
+                true,
+                200,
+                "채팅 메시지 조회에 성공했습니다.",
                 data
         );
 

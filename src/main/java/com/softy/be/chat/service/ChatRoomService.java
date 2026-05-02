@@ -3,6 +3,8 @@ package com.softy.be.chat.service;
 import com.softy.be.chat.dto.ChatRoomDetailData;
 import com.softy.be.chat.dto.ChatRoomListData;
 import com.softy.be.chat.dto.ChatRoomListItemData;
+import com.softy.be.chat.dto.ChatRoomMessageItemData;
+import com.softy.be.chat.dto.ChatRoomMessageListData;
 import com.softy.be.chat.dto.InitMessageIntentData;
 import com.softy.be.chat.dto.InitMessageIntentRequest;
 import com.softy.be.chat.dto.InitMessageSendData;
@@ -33,6 +35,8 @@ import java.time.DayOfWeek;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.time.ZoneId;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 @Service
@@ -88,6 +92,63 @@ public class ChatRoomService {
                 nullToEmpty(row.getStudentName()),
                 nullToEmpty(row.getIntentLabel()),
                 nullToEmpty(row.getStatus())
+        );
+    }
+
+    @Transactional(readOnly = true)
+    public ChatRoomMessageListData getChatRoomMessages(Long userId, Long chatRoomId, Long cursor, int size) {
+        if (chatRoomId == null || chatRoomId <= 0) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "chatRoomId는 1 이상이어야 합니다.");
+        }
+        if (cursor != null && cursor <= 0) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "cursor는 1 이상이어야 합니다.");
+        }
+        if (size < 1 || size > MAX_PAGE_SIZE) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "size는 1~100 사이여야 합니다.");
+        }
+
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "사용자를 찾을 수 없습니다."));
+
+        if (!ROLE_TEACHER.equalsIgnoreCase(user.getRole()) && !ROLE_PARENT.equalsIgnoreCase(user.getRole())) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "학부모 또는 교사 계정만 조회할 수 있습니다.");
+        }
+
+        chatRoomRepository.findById(chatRoomId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "채팅방을 찾을 수 없습니다."));
+
+        boolean hasAccess = chatRoomRepository.existsParticipantByChatRoomIdAndUserId(chatRoomId, userId);
+        if (!hasAccess) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "해당 채팅방에 접근할 권한이 없습니다.");
+        }
+
+        List<Message> descendingMessages = messageRepository.findPreviewMessages(
+                chatRoomId,
+                cursor,
+                PageRequest.of(0, size)
+        );
+
+        List<ChatRoomMessageItemData> messages = new ArrayList<>(descendingMessages.size());
+        for (Message message : descendingMessages) {
+            messages.add(new ChatRoomMessageItemData(
+                    message.getId(),
+                    message.getSender().getId().equals(userId),
+                    nullToEmpty(message.getSender().getName()),
+                    nullToEmpty(message.getSender().getRole()),
+                    message.resolveReportContent(),
+                    message.getCreatedAt()
+            ));
+        }
+        Collections.reverse(messages);
+
+        Long nextCursor = messages.isEmpty() ? null : messages.get(0).messageId();
+        boolean hasNext = nextCursor != null && messageRepository.existsOlderMessage(chatRoomId, nextCursor);
+
+        return new ChatRoomMessageListData(
+                chatRoomId,
+                messages,
+                nextCursor,
+                hasNext
         );
     }
 
