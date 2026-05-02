@@ -43,6 +43,15 @@ public class Message extends BaseEntity {
     @JoinColumn(name = "sender_id")
     private User sender;
 
+    public static Message create(String type, String content, ChatRoom chatRoom, User sender) {
+        Message message = new Message();
+        message.type = type;
+        message.content = content;
+        message.chatRoom = chatRoom;
+        message.sender = sender;
+        return message;
+    }
+
     public String resolveReportContent() {
         if (hasText(modifyContent)) {
             return modifyContent.trim();

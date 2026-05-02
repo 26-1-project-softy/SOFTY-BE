@@ -72,6 +72,8 @@ report:
 ai:
   evaluation:
     base-url: ${AI_SERVER_BASE_URL}
+  intent:
+    base-url: ${AI_SERVER_BASE_URL}
 
 management:
   endpoints:
