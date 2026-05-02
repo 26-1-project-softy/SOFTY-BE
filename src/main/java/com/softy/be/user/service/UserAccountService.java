@@ -163,6 +163,43 @@ public class UserAccountService {
         );
     }
 
+    @Transactional(readOnly = true)
+    public ParentSettingResult getParentSetting(Long userId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "사용자를 찾을 수 없습니다."));
+
+        if (!"PARENT".equalsIgnoreCase(user.getRole())) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "학부모 계정만 설정 정보를 조회할 수 있습니다.");
+        }
+
+        ParentStudent mapping = parentStudentRepository.findFirstByParentIdOrderByIdDesc(userId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "연결된 자녀 정보를 찾을 수 없습니다."));
+
+        if (mapping.getStudent() == null || mapping.getStudent().getClassroom() == null) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "학생의 학급 정보를 찾을 수 없습니다.");
+        }
+
+        Classroom classroom = mapping.getStudent().getClassroom();
+        User teacher = classroom.getTeacher();
+        if (teacher == null) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "담당 교사 정보를 찾을 수 없습니다.");
+        }
+
+        List<ParentSettingScheduleResult> schedules = teacherSettingRepository
+                .findByTeacherIdOrderByDayOfWeekAscIdAsc(teacher.getId())
+                .stream()
+                .map(this::toParentSettingScheduleResult)
+                .toList();
+
+        return new ParentSettingResult(
+                classroom.getGrade(),
+                classroom.getClassNumber(),
+                mapping.getStudent().getName(),
+                teacher.getName(),
+                schedules
+        );
+    }
+
     @Transactional
     public void updateTeacherWorkHours(Long userId, TeacherWorkHoursUpdateRequest request) {
         if (request == null || request.schedules() == null) {
@@ -219,6 +256,14 @@ public class UserAccountService {
 
     private TeacherSettingScheduleResult toTeacherSettingScheduleResult(TeacherSetting setting) {
         return new TeacherSettingScheduleResult(
+                setting.getDayOfWeek(),
+                toLocalTime(setting.getStartTime()),
+                toLocalTime(setting.getEndTime())
+        );
+    }
+
+    private ParentSettingScheduleResult toParentSettingScheduleResult(TeacherSetting setting) {
+        return new ParentSettingScheduleResult(
                 setting.getDayOfWeek(),
                 toLocalTime(setting.getStartTime()),
                 toLocalTime(setting.getEndTime())
