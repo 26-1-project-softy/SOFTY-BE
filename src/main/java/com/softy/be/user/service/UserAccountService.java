@@ -13,6 +13,7 @@ import com.softy.be.school.repository.SchoolRepository;
 import com.softy.be.school.repository.TeacherSettingRepository;
 import com.softy.be.school.service.ClassCodeService;
 import com.softy.be.user.dto.TeacherClassUpdateRequest;
+import com.softy.be.user.dto.ParentClassPreviewRequest;
 import com.softy.be.user.dto.TeacherWorkHoursScheduleRequest;
 import com.softy.be.user.dto.TeacherWorkHoursUpdateRequest;
 import com.softy.be.user.repository.SocialAccountRepository;
@@ -200,6 +201,33 @@ public class UserAccountService {
         );
     }
 
+    @Transactional(readOnly = true)
+    public ParentClassPreviewResult previewParentClassChange(Long userId, ParentClassPreviewRequest request) {
+        validateParentClassPreviewRequest(request);
+
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "사용자를 찾을 수 없습니다."));
+
+        if (!"PARENT".equalsIgnoreCase(user.getRole())) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "학부모 계정만 학급 변경을 요청할 수 있습니다.");
+        }
+
+        ClassCode classCode = classCodeRepository.findFirstByCodeAndIsActiveTrueOrderByIdDesc(request.classCode().trim())
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "유효한 학급 코드를 찾을 수 없습니다."));
+
+        Classroom classroom = classCode.getClassroom();
+        if (classroom == null) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "학급 정보를 찾을 수 없습니다.");
+        }
+
+        String schoolName = classroom.getSchool() == null ? null : classroom.getSchool().getName();
+        return new ParentClassPreviewResult(
+                schoolName,
+                classroom.getGrade(),
+                classroom.getClassNumber()
+        );
+    }
+
     @Transactional
     public void updateTeacherWorkHours(Long userId, TeacherWorkHoursUpdateRequest request) {
         if (request == null || request.schedules() == null) {
@@ -272,6 +300,15 @@ public class UserAccountService {
 
     private LocalTime toLocalTime(LocalDateTime value) {
         return value == null ? null : value.toLocalTime();
+    }
+
+    private void validateParentClassPreviewRequest(ParentClassPreviewRequest request) {
+        if (request == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "요청 본문이 필요합니다.");
+        }
+        if (isBlank(request.classCode())) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "classCode는 필수입니다.");
+        }
     }
 
     private void validateTeacherClassUpdateRequest(TeacherClassUpdateRequest request) {
