@@ -11,6 +11,7 @@ import com.softy.be.school.repository.ClassCodeRepository;
 import com.softy.be.school.repository.ClassroomRepository;
 import com.softy.be.school.repository.ParentStudentRepository;
 import com.softy.be.school.repository.SchoolRepository;
+import com.softy.be.school.repository.StudentRepository;
 import com.softy.be.school.repository.TeacherSettingRepository;
 import com.softy.be.school.service.ClassCodeService;
 import com.softy.be.user.dto.TeacherClassUpdateRequest;
@@ -27,8 +28,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
-import java.time.LocalDate;
-import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -47,6 +46,7 @@ public class UserAccountService {
     private final ParentStudentRepository parentStudentRepository;
     private final SchoolRepository schoolRepository;
     private final ClassCodeRepository classCodeRepository;
+    private final StudentRepository studentRepository;
     private final TeacherSettingRepository teacherSettingRepository;
     private final ClassCodeService classCodeService;
     private final KakaoOAuthClient kakaoOAuthClient;
@@ -245,8 +245,8 @@ public class UserAccountService {
         ParentStudent mapping = parentStudentRepository.findFirstByParentIdOrderByIdDesc(userId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "연결된 자녀 정보를 찾을 수 없습니다."));
 
-        Student student = mapping.getStudent();
-        if (student == null) {
+        Student currentStudent = mapping.getStudent();
+        if (currentStudent == null) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "연결된 학생 정보를 찾을 수 없습니다.");
         }
 
@@ -258,7 +258,23 @@ public class UserAccountService {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "학급 정보를 찾을 수 없습니다.");
         }
 
-        student.updateClassroom(classroom);
+        Student targetStudent = studentRepository
+                .findFirstByClassroomIdAndNameAndBirthdayAndGenderOrderByIdDesc(
+                        classroom.getId(),
+                        currentStudent.getName(),
+                        currentStudent.getBirthday(),
+                        currentStudent.getGender()
+                )
+                .orElseGet(() -> studentRepository.save(
+                        Student.create(
+                                currentStudent.getName(),
+                                currentStudent.getBirthday(),
+                                currentStudent.getGender(),
+                                classroom
+                        )
+                ));
+
+        mapping.changeStudent(targetStudent);
 
         String schoolName = classroom.getSchool() == null ? null : classroom.getSchool().getName();
         return new ParentClassUpdateResult(
@@ -292,7 +308,6 @@ public class UserAccountService {
     private List<TeacherSetting> buildTeacherSettings(User user, List<TeacherWorkHoursScheduleRequest> schedules) {
         Set<Short> days = new HashSet<>();
         List<TeacherSetting> settings = new ArrayList<>();
-        LocalDate baseDate = LocalDate.of(1970, 1, 1);
 
         for (TeacherWorkHoursScheduleRequest schedule : schedules) {
             if (schedule == null) {
@@ -314,8 +329,8 @@ public class UserAccountService {
             settings.add(TeacherSetting.create(
                     user,
                     schedule.dayOfWeek(),
-                    LocalDateTime.of(baseDate, schedule.startTime()),
-                    LocalDateTime.of(baseDate, schedule.endTime())
+                    schedule.startTime(),
+                    schedule.endTime()
             ));
         }
 
@@ -325,21 +340,17 @@ public class UserAccountService {
     private TeacherSettingScheduleResult toTeacherSettingScheduleResult(TeacherSetting setting) {
         return new TeacherSettingScheduleResult(
                 setting.getDayOfWeek(),
-                toLocalTime(setting.getStartTime()),
-                toLocalTime(setting.getEndTime())
+                setting.getStartTime(),
+                setting.getEndTime()
         );
     }
 
     private ParentSettingScheduleResult toParentSettingScheduleResult(TeacherSetting setting) {
         return new ParentSettingScheduleResult(
                 setting.getDayOfWeek(),
-                toLocalTime(setting.getStartTime()),
-                toLocalTime(setting.getEndTime())
+                setting.getStartTime(),
+                setting.getEndTime()
         );
-    }
-
-    private LocalTime toLocalTime(LocalDateTime value) {
-        return value == null ? null : value.toLocalTime();
     }
 
     private void validateParentClassPreviewRequest(ParentClassPreviewRequest request) {

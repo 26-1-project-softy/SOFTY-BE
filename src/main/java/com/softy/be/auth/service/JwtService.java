@@ -1,5 +1,6 @@
 package com.softy.be.auth.service;
 
+import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.JwtException;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
@@ -56,17 +57,37 @@ public class JwtService {
     }
 
     public Long extractUserId(String token) {
+        return parseUserId(token);
+    }
+
+    public Long extractAccessUserId(String token) {
         try {
-            String subject = Jwts.parser()
-                    .verifyWith(signingKey)
-                    .build()
-                    .parseSignedClaims(token)
-                    .getPayload()
-                    .getSubject();
+            Claims claims = parseClaims(token);
+            String tokenType = claims.get("tokenType", String.class);
+            if (!"ACCESS".equals(tokenType)) {
+                throw new IllegalStateException("인증에는 액세스 토큰만 사용할 수 있습니다.");
+            }
+            return Long.parseLong(claims.getSubject());
+        } catch (JwtException | IllegalArgumentException e) {
+            throw new IllegalStateException("유효하지 않은 JWT 토큰입니다.", e);
+        }
+    }
+
+    private Long parseUserId(String token) {
+        try {
+            String subject = parseClaims(token).getSubject();
             return Long.parseLong(subject);
         } catch (JwtException | IllegalArgumentException e) {
-            throw new IllegalStateException("유효하지 않은 JWT 토큰입니다", e);
+            throw new IllegalStateException("유효하지 않은 JWT 토큰입니다.", e);
         }
+    }
+
+    private Claims parseClaims(String token) {
+        return Jwts.parser()
+                .verifyWith(signingKey)
+                .build()
+                .parseSignedClaims(token)
+                .getPayload();
     }
 
     private byte[] sha256(String value) {
@@ -74,7 +95,7 @@ public class JwtService {
             MessageDigest digest = MessageDigest.getInstance("SHA-256");
             return digest.digest(value.getBytes(StandardCharsets.UTF_8));
         } catch (NoSuchAlgorithmException e) {
-            throw new IllegalStateException("SHA-256 알고리즘을 사용할 수 없습니다", e);
+            throw new IllegalStateException("SHA-256 알고리즘을 사용할 수 없습니다.", e);
         }
     }
 }
