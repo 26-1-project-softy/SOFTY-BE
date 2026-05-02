@@ -37,4 +37,8 @@ public class ParentStudent extends BaseEntity {
         mapping.student = student;
         return mapping;
     }
+
+    public void changeStudent(Student student) {
+        this.student = student;
+    }
 }

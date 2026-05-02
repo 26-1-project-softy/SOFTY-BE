@@ -144,6 +144,11 @@ public class ReportService {
         ChatRoom chatRoom = chatRoomRepository.findById(chatRoomId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "채팅방을 찾을 수 없습니다"));
 
+        boolean hasAccess = chatRoomRepository.existsParticipantByChatRoomIdAndUserId(chatRoomId, userId);
+        if (!hasAccess) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "해당 채팅방에 접근할 권한이 없습니다.");
+        }
+
         List<Message> messages = messageRepository.findAllByChatRoomIdForReport(chatRoomId);
         byte[] pdfBytes = reportPdfRenderService.render(chatRoomId, chatRoom.getIntentLabel(), messages);
 

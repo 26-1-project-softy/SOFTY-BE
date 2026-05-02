@@ -330,8 +330,8 @@ public class ChatRoomService {
         return settings.stream()
                 .filter(setting -> setting.getDayOfWeek() == currentDayOfWeek.getValue())
                 .anyMatch(setting -> {
-                    LocalTime startTime = setting.getStartTime().toLocalTime();
-                    LocalTime endTime = setting.getEndTime().toLocalTime();
+                    LocalTime startTime = setting.getStartTime();
+                    LocalTime endTime = setting.getEndTime();
                     return !currentTime.isBefore(startTime) && currentTime.isBefore(endTime);
                 });
     }
