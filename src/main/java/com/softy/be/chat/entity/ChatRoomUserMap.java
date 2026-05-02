@@ -45,4 +45,9 @@ public class ChatRoomUserMap extends BaseEntity {
         mapping.lastReadAt = lastReadAt;
         return mapping;
     }
+
+    public void markAsRead(LocalDateTime readAt) {
+        this.unreadCount = 0;
+        this.lastReadAt = readAt;
+    }
 }

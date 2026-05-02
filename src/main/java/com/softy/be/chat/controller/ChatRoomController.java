@@ -4,6 +4,7 @@ import com.softy.be.auth.security.AuthenticatedUserPrincipal;
 import com.softy.be.chat.dto.ChatRoomDetailData;
 import com.softy.be.chat.dto.ChatRoomListData;
 import com.softy.be.chat.dto.ChatRoomMessageListData;
+import com.softy.be.chat.dto.ChatRoomReadData;
 import com.softy.be.chat.dto.InitMessageIntentData;
 import com.softy.be.chat.dto.InitMessageIntentRequest;
 import com.softy.be.chat.dto.InitMessageSendData;
@@ -69,6 +70,27 @@ public class ChatRoomController {
                 true,
                 200,
                 "채팅 메시지 조회에 성공했습니다.",
+                data
+        );
+
+        return ResponseEntity.ok(response);
+    }
+
+    @PostMapping("/{chatRoomId}/read")
+    @Operation(
+            summary = "채팅방 읽음 처리",
+            description = "로그인한 학부모 또는 교사가 특정 채팅방의 안 읽은 메시지를 모두 읽음 처리합니다."
+    )
+    public ResponseEntity<ApiResponse<ChatRoomReadData>> markChatRoomAsRead(
+            @AuthenticationPrincipal AuthenticatedUserPrincipal principal,
+            @PathVariable("chatRoomId") Long chatRoomId
+    ) {
+        ChatRoomReadData data = chatRoomService.markChatRoomAsRead(principal.userId(), chatRoomId);
+
+        ApiResponse<ChatRoomReadData> response = ApiResponse.of(
+                true,
+                200,
+                "채팅방 읽음 처리에 성공했습니다.",
                 data
         );
 
