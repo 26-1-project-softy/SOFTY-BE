@@ -37,3 +37,5 @@ embedding:
 ai:
   evaluation:
     base-url: http://localhost:65000
+  intent:
+    base-url: http://localhost:65000
