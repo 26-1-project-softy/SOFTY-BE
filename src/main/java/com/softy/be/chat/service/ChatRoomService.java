@@ -1,5 +1,7 @@
 package com.softy.be.chat.service;
 
+import com.softy.be.chat.dto.ChatRoomListData;
+import com.softy.be.chat.dto.ChatRoomListItemData;
 import com.softy.be.chat.dto.InitMessageIntentData;
 import com.softy.be.chat.dto.InitMessageIntentRequest;
 import com.softy.be.chat.dto.InitMessageSendData;
@@ -8,6 +10,7 @@ import com.softy.be.chat.entity.ChatRoom;
 import com.softy.be.chat.entity.ChatRoomStatus;
 import com.softy.be.chat.entity.ChatRoomUserMap;
 import com.softy.be.chat.entity.Message;
+import com.softy.be.chat.repository.ChatRoomListRow;
 import com.softy.be.chat.repository.ChatRoomRepository;
 import com.softy.be.chat.repository.ChatRoomUserMapRepository;
 import com.softy.be.chat.repository.MessageRepository;
@@ -18,6 +21,7 @@ import com.softy.be.school.repository.TeacherSettingRepository;
 import com.softy.be.user.entity.User;
 import com.softy.be.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -34,8 +38,10 @@ import java.util.List;
 public class ChatRoomService {
 
     private static final String ROLE_PARENT = "PARENT";
+    private static final String ROLE_TEACHER = "TEACHER";
     private static final String MESSAGE_TYPE_TEXT = "TEXT";
     private static final ZoneId SEOUL_ZONE_ID = ZoneId.of("Asia/Seoul");
+    private static final int MAX_PAGE_SIZE = 100;
 
     private final UserRepository userRepository;
     private final ParentStudentRepository parentStudentRepository;
@@ -44,6 +50,42 @@ public class ChatRoomService {
     private final ChatRoomUserMapRepository chatRoomUserMapRepository;
     private final MessageRepository messageRepository;
     private final IntentClassificationClient intentClassificationClient;
+
+    @Transactional(readOnly = true)
+    public ChatRoomListData getChatRooms(Long userId, Long cursor, int size) {
+        if (cursor != null && cursor <= 0) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "cursor는 1 이상이어야 합니다.");
+        }
+        if (size < 1 || size > MAX_PAGE_SIZE) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "size는 1~100 사이여야 합니다.");
+        }
+
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "사용자를 찾을 수 없습니다."));
+
+        List<ChatRoomListRow> result;
+        PageRequest pageable = PageRequest.of(0, size + 1);
+        if (ROLE_TEACHER.equalsIgnoreCase(user.getRole())) {
+            result = chatRoomRepository.findChatRoomsByTeacherId(userId, cursor, pageable);
+        } else if (ROLE_PARENT.equalsIgnoreCase(user.getRole())) {
+            result = chatRoomRepository.findChatRoomsByParentId(userId, cursor, pageable);
+        } else {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "학부모 또는 교사 계정만 조회할 수 있습니다.");
+        }
+
+        boolean hasNext = result.size() > size;
+        List<ChatRoomListRow> pageContent = hasNext ? result.subList(0, size) : result;
+        Long nextCursor = hasNext ? pageContent.get(pageContent.size() - 1).getChatRoomId() : null;
+
+        return new ChatRoomListData(
+                pageContent.stream()
+                        .map(this::toChatRoomListItemData)
+                        .toList(),
+                size,
+                nextCursor,
+                hasNext
+        );
+    }
 
     @Transactional(readOnly = true)
     public InitMessageIntentData analyzeInitMessageIntent(Long userId, InitMessageIntentRequest request) {
@@ -125,6 +167,23 @@ public class ChatRoomService {
 
     private boolean isBlank(String value) {
         return value == null || value.trim().isEmpty();
+    }
+
+    private ChatRoomListItemData toChatRoomListItemData(ChatRoomListRow row) {
+        return new ChatRoomListItemData(
+                row.getChatRoomId(),
+                nullToEmpty(row.getCounterpartName()),
+                nullToEmpty(row.getStudentName()),
+                nullToEmpty(row.getLastMessage()),
+                row.getLastMessageAt(),
+                row.getUnreadCount() == null ? 0 : row.getUnreadCount(),
+                nullToEmpty(row.getStatus()),
+                nullToEmpty(row.getIntentLabel())
+        );
+    }
+
+    private String nullToEmpty(String value) {
+        return value == null ? "" : value;
     }
 
     private boolean isTeacherInWorkingHours(Long teacherId) {
