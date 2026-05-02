@@ -85,8 +85,8 @@ CREATE TABLE teacher_setting (
     id BIGSERIAL PRIMARY KEY,
     teacher_id BIGINT NOT NULL,
     day_of_week SMALLINT NOT NULL,
-    start_time TIMESTAMP NOT NULL,
-    end_time TIMESTAMP NOT NULL,
+    start_time TIME NOT NULL,
+    end_time TIME NOT NULL,
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (teacher_id) REFERENCES users(id)

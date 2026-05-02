@@ -28,8 +28,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
-import java.time.LocalDate;
-import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -310,7 +308,6 @@ public class UserAccountService {
     private List<TeacherSetting> buildTeacherSettings(User user, List<TeacherWorkHoursScheduleRequest> schedules) {
         Set<Short> days = new HashSet<>();
         List<TeacherSetting> settings = new ArrayList<>();
-        LocalDate baseDate = LocalDate.of(1970, 1, 1);
 
         for (TeacherWorkHoursScheduleRequest schedule : schedules) {
             if (schedule == null) {
@@ -332,8 +329,8 @@ public class UserAccountService {
             settings.add(TeacherSetting.create(
                     user,
                     schedule.dayOfWeek(),
-                    LocalDateTime.of(baseDate, schedule.startTime()),
-                    LocalDateTime.of(baseDate, schedule.endTime())
+                    schedule.startTime(),
+                    schedule.endTime()
             ));
         }
 
@@ -343,21 +340,17 @@ public class UserAccountService {
     private TeacherSettingScheduleResult toTeacherSettingScheduleResult(TeacherSetting setting) {
         return new TeacherSettingScheduleResult(
                 setting.getDayOfWeek(),
-                toLocalTime(setting.getStartTime()),
-                toLocalTime(setting.getEndTime())
+                setting.getStartTime(),
+                setting.getEndTime()
         );
     }
 
     private ParentSettingScheduleResult toParentSettingScheduleResult(TeacherSetting setting) {
         return new ParentSettingScheduleResult(
                 setting.getDayOfWeek(),
-                toLocalTime(setting.getStartTime()),
-                toLocalTime(setting.getEndTime())
+                setting.getStartTime(),
+                setting.getEndTime()
         );
-    }
-
-    private LocalTime toLocalTime(LocalDateTime value) {
-        return value == null ? null : value.toLocalTime();
     }
 
     private void validateParentClassPreviewRequest(ParentClassPreviewRequest request) {

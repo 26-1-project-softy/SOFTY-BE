@@ -10,7 +10,10 @@ import com.softy.be.school.repository.ClassroomRepository;
 import com.softy.be.school.repository.ParentStudentRepository;
 import com.softy.be.school.repository.SchoolRepository;
 import com.softy.be.school.repository.StudentRepository;
+import com.softy.be.school.repository.TeacherSettingRepository;
 import com.softy.be.user.dto.ParentClassUpdateRequest;
+import com.softy.be.user.dto.TeacherWorkHoursScheduleRequest;
+import com.softy.be.user.dto.TeacherWorkHoursUpdateRequest;
 import com.softy.be.user.entity.User;
 import com.softy.be.user.repository.UserRepository;
 import org.junit.jupiter.api.Test;
@@ -20,6 +23,8 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
+import java.time.LocalTime;
+import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -48,6 +53,9 @@ class UserAccountServiceTest {
 
     @Autowired
     private ClassCodeRepository classCodeRepository;
+
+    @Autowired
+    private TeacherSettingRepository teacherSettingRepository;
 
     @Test
     void updateParentClassCreatesNewStudentAndKeepsOriginalStudentInPlace() {
@@ -111,6 +119,29 @@ class UserAccountServiceTest {
         assertThat(reloadedMapping.getStudent().getId()).isEqualTo(targetStudent.getId());
         assertThat(reloadedOriginalStudent.getClassroom().getId()).isEqualTo(sourceClassroom.getId());
         assertThat(studentRepository.count()).isEqualTo(2);
+    }
+
+    @Test
+    void updateTeacherWorkHoursStoresTimeOnlyValues() {
+        User teacher = userRepository.save(createTeacher("teacher_name"));
+
+        userAccountService.updateTeacherWorkHours(
+                teacher.getId(),
+                new TeacherWorkHoursUpdateRequest(List.of(
+                        new TeacherWorkHoursScheduleRequest((short) 1, LocalTime.of(9, 30), LocalTime.of(16, 0)),
+                        new TeacherWorkHoursScheduleRequest((short) 3, LocalTime.of(10, 0), LocalTime.of(18, 0))
+                ))
+        );
+
+        var settings = teacherSettingRepository.findByTeacherIdOrderByDayOfWeekAscIdAsc(teacher.getId());
+
+        assertThat(settings).hasSize(2);
+        assertThat(settings.get(0).getDayOfWeek()).isEqualTo((short) 1);
+        assertThat(settings.get(0).getStartTime()).isEqualTo(LocalTime.of(9, 30));
+        assertThat(settings.get(0).getEndTime()).isEqualTo(LocalTime.of(16, 0));
+        assertThat(settings.get(1).getDayOfWeek()).isEqualTo((short) 3);
+        assertThat(settings.get(1).getStartTime()).isEqualTo(LocalTime.of(10, 0));
+        assertThat(settings.get(1).getEndTime()).isEqualTo(LocalTime.of(18, 0));
     }
 
     private User createTeacher(String name) {
