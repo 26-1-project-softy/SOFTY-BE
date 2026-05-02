@@ -6,7 +6,6 @@ public record AdminLatestModelData(
         String modelVersion,
         String datasetVersion,
         String status,
-        String lastTrainedAt,
-        String lastDeployedAt
+        String lastTrainedAt
 ) {
 }

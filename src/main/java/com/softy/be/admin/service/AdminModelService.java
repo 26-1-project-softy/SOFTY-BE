@@ -22,7 +22,6 @@ public class AdminModelService {
                 nullToEmpty(result.modelVersion()),
                 nullIfBlank(result.datasetVersion()),
                 nullToEmpty(result.status()),
-                lastTrainedAt,
                 lastTrainedAt
         );
     }

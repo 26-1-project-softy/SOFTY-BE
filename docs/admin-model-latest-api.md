@@ -20,7 +20,6 @@
 - AI 서버 호출 경로: `{AI_SERVER_BASE_URL}/ai/training-jobs`
 - `job_id`는 전달하지 않는다
 - AI 응답의 `started_at`을 `lastTrainedAt`으로 사용한다
-- 현재 `lastDeployedAt`은 `lastTrainedAt`과 같은 값으로 내려준다
 - `status`는 AI 서버 응답 값을 그대로 사용한다
 - `datasetVersion` 필드가 비어 있으면 `null`로 반환한다
 - 최신 이력이 없으면 `404 Not Found`를 반환한다
@@ -38,8 +37,7 @@
     "modelVersion": "v1.0.3",
     "datasetVersion": "dataset-v5",
     "status": "completed",
-    "lastTrainedAt": "2026-04-25T01:00:00",
-    "lastDeployedAt": "2026-04-25T01:00:00"
+    "lastTrainedAt": "2026-04-25T01:00:00"
   }
 }
 ```
@@ -54,7 +52,6 @@
 - `data.datasetVersion`: 사용한 데이터셋 버전. AI 서버에서 내려주지 않으면 `null`
 - `data.status`: AI 서버가 반환한 학습 상태 값
 - `data.lastTrainedAt`: 최신 학습 시각 (`started_at`)
-- `data.lastDeployedAt`: 현재는 최신 학습 시각과 동일한 값
 
 ## AI 서버 응답 매핑
 - `job_id` -> `jobId`
@@ -63,7 +60,6 @@
 - `dataset_version` -> `datasetVersion`
 - `status` -> `status`
 - `started_at` -> `lastTrainedAt`
-- `started_at` -> `lastDeployedAt`
 
 ## 오류 응답
 - `401 Unauthorized`
