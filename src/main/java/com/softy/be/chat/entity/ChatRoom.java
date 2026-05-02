@@ -20,4 +20,11 @@ public class ChatRoom extends BaseEntity {
     private String intentLabel;
 
     private String status;
+
+    public static ChatRoom create(String intentLabel, String status) {
+        ChatRoom chatRoom = new ChatRoom();
+        chatRoom.intentLabel = intentLabel;
+        chatRoom.status = status;
+        return chatRoom;
+    }
 }

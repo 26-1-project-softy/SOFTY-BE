@@ -3,6 +3,8 @@ package com.softy.be.chat.controller;
 import com.softy.be.auth.security.AuthenticatedUserPrincipal;
 import com.softy.be.chat.dto.InitMessageIntentData;
 import com.softy.be.chat.dto.InitMessageIntentRequest;
+import com.softy.be.chat.dto.InitMessageSendData;
+import com.softy.be.chat.dto.InitMessageSendRequest;
 import com.softy.be.chat.service.ChatRoomService;
 import com.softy.be.common.api.ApiResponse;
 import io.swagger.v3.oas.annotations.Operation;
@@ -46,5 +48,26 @@ public class ChatRoomController {
         );
 
         return ResponseEntity.ok(response);
+    }
+
+    @PostMapping("/init-messages/send")
+    @Operation(
+            summary = "초기 문의 최종 전송",
+            description = "학부모의 첫 문의를 최종 전송하고 채팅방과 첫 메시지를 생성합니다."
+    )
+    public ResponseEntity<ApiResponse<InitMessageSendData>> sendInitMessage(
+            @AuthenticationPrincipal AuthenticatedUserPrincipal principal,
+            @RequestBody InitMessageSendRequest request
+    ) {
+        InitMessageSendData data = chatRoomService.sendInitMessage(principal.userId(), request);
+
+        ApiResponse<InitMessageSendData> response = ApiResponse.of(
+                true,
+                201,
+                "첫 메시지가 전송되었습니다.",
+                data
+        );
+
+        return ResponseEntity.status(201).body(response);
     }
 }

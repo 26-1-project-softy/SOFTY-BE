@@ -2,6 +2,14 @@ package com.softy.be.chat.service;
 
 import com.softy.be.chat.dto.InitMessageIntentData;
 import com.softy.be.chat.dto.InitMessageIntentRequest;
+import com.softy.be.chat.dto.InitMessageSendData;
+import com.softy.be.chat.dto.InitMessageSendRequest;
+import com.softy.be.chat.entity.ChatRoom;
+import com.softy.be.chat.entity.ChatRoomUserMap;
+import com.softy.be.chat.entity.Message;
+import com.softy.be.chat.repository.ChatRoomRepository;
+import com.softy.be.chat.repository.ChatRoomUserMapRepository;
+import com.softy.be.chat.repository.MessageRepository;
 import com.softy.be.school.entity.ParentStudent;
 import com.softy.be.school.repository.ParentStudentRepository;
 import com.softy.be.user.entity.User;
@@ -12,14 +20,21 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.time.LocalDateTime;
+
 @Service
 @RequiredArgsConstructor
 public class ChatRoomService {
 
     private static final String ROLE_PARENT = "PARENT";
+    private static final String CHAT_ROOM_STATUS_OPEN = "OPEN";
+    private static final String MESSAGE_TYPE_TEXT = "TEXT";
 
     private final UserRepository userRepository;
     private final ParentStudentRepository parentStudentRepository;
+    private final ChatRoomRepository chatRoomRepository;
+    private final ChatRoomUserMapRepository chatRoomUserMapRepository;
+    private final MessageRepository messageRepository;
     private final IntentClassificationClient intentClassificationClient;
 
     @Transactional(readOnly = true)
@@ -29,6 +44,30 @@ public class ChatRoomService {
 
         String intentLabel = intentClassificationClient.classifyIntent(request.content().trim());
         return new InitMessageIntentData(intentLabel);
+    }
+
+    @Transactional
+    public InitMessageSendData sendInitMessage(Long userId, InitMessageSendRequest request) {
+        validateSendRequest(request);
+
+        ParentTeacherLink link = resolveParentTeacherLink(userId);
+        User parent = link.parent();
+        User teacher = link.teacher();
+
+        ChatRoom chatRoom = chatRoomRepository.save(ChatRoom.create(request.intentLabel().trim(), CHAT_ROOM_STATUS_OPEN));
+
+        LocalDateTime now = LocalDateTime.now();
+        chatRoomUserMapRepository.save(ChatRoomUserMap.create(chatRoom, parent, 0, now));
+        chatRoomUserMapRepository.save(ChatRoomUserMap.create(chatRoom, teacher, 1, now));
+
+        Message message = messageRepository.save(Message.create(
+                MESSAGE_TYPE_TEXT,
+                request.content().trim(),
+                chatRoom,
+                parent
+        ));
+
+        return new InitMessageSendData(chatRoom.getId(), message.getId());
     }
 
     private ParentTeacherLink resolveParentTeacherLink(Long userId) {
@@ -57,6 +96,18 @@ public class ChatRoomService {
         }
         if (isBlank(request.content())) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "content는 필수입니다.");
+        }
+    }
+
+    private void validateSendRequest(InitMessageSendRequest request) {
+        if (request == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "요청 본문이 필요합니다.");
+        }
+        if (isBlank(request.content())) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "content는 필수입니다.");
+        }
+        if (isBlank(request.intentLabel())) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "intentLabel은 필수입니다.");
         }
     }
 
