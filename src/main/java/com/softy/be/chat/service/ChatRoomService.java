@@ -112,7 +112,7 @@ public class ChatRoomService {
 
         LocalDateTime now = LocalDateTime.now();
         chatRoomUserMapRepository.save(ChatRoomUserMap.create(chatRoom, parent, 0, now));
-        chatRoomUserMapRepository.save(ChatRoomUserMap.create(chatRoom, teacher, 1, now));
+        chatRoomUserMapRepository.save(ChatRoomUserMap.create(chatRoom, teacher, 1, null));
 
         Message message = messageRepository.save(Message.create(
                 MESSAGE_TYPE_TEXT,
