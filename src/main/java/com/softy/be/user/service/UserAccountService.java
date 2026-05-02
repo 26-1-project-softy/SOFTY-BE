@@ -11,6 +11,7 @@ import com.softy.be.school.repository.ClassCodeRepository;
 import com.softy.be.school.repository.ClassroomRepository;
 import com.softy.be.school.repository.ParentStudentRepository;
 import com.softy.be.school.repository.SchoolRepository;
+import com.softy.be.school.repository.StudentRepository;
 import com.softy.be.school.repository.TeacherSettingRepository;
 import com.softy.be.school.service.ClassCodeService;
 import com.softy.be.user.dto.TeacherClassUpdateRequest;
@@ -47,6 +48,7 @@ public class UserAccountService {
     private final ParentStudentRepository parentStudentRepository;
     private final SchoolRepository schoolRepository;
     private final ClassCodeRepository classCodeRepository;
+    private final StudentRepository studentRepository;
     private final TeacherSettingRepository teacherSettingRepository;
     private final ClassCodeService classCodeService;
     private final KakaoOAuthClient kakaoOAuthClient;
@@ -245,8 +247,8 @@ public class UserAccountService {
         ParentStudent mapping = parentStudentRepository.findFirstByParentIdOrderByIdDesc(userId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "연결된 자녀 정보를 찾을 수 없습니다."));
 
-        Student student = mapping.getStudent();
-        if (student == null) {
+        Student currentStudent = mapping.getStudent();
+        if (currentStudent == null) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "연결된 학생 정보를 찾을 수 없습니다.");
         }
 
@@ -258,7 +260,23 @@ public class UserAccountService {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "학급 정보를 찾을 수 없습니다.");
         }
 
-        student.updateClassroom(classroom);
+        Student targetStudent = studentRepository
+                .findFirstByClassroomIdAndNameAndBirthdayAndGenderOrderByIdDesc(
+                        classroom.getId(),
+                        currentStudent.getName(),
+                        currentStudent.getBirthday(),
+                        currentStudent.getGender()
+                )
+                .orElseGet(() -> studentRepository.save(
+                        Student.create(
+                                currentStudent.getName(),
+                                currentStudent.getBirthday(),
+                                currentStudent.getGender(),
+                                classroom
+                        )
+                ));
+
+        mapping.changeStudent(targetStudent);
 
         String schoolName = classroom.getSchool() == null ? null : classroom.getSchool().getName();
         return new ParentClassUpdateResult(
