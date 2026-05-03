@@ -172,13 +172,28 @@ CREATE TABLE model_training_history (
     updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
--- 15. AI_FEEDBACK
+-- 15. MESSAGE_ANALYSIS
+CREATE TABLE message_analysis (
+    id BIGSERIAL PRIMARY KEY,
+    chat_room_id BIGINT NOT NULL,
+    teacher_id BIGINT NOT NULL,
+    original_content TEXT NOT NULL,
+    risk_level VARCHAR(20) NOT NULL,
+    recommended_message TEXT,
+    expires_at TIMESTAMP,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (chat_room_id) REFERENCES chat_room(id),
+    FOREIGN KEY (teacher_id) REFERENCES users(id)
+);
+
+-- 16. AI_FEEDBACK
 CREATE TABLE ai_feedback (
     id BIGSERIAL PRIMARY KEY,
-    message_id BIGINT NOT NULL,
+    message_analysis_id BIGINT NOT NULL,
     type VARCHAR(20) NOT NULL,
     actual_risk_score INT,
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (message_id) REFERENCES message(id)
+    FOREIGN KEY (message_analysis_id) REFERENCES message_analysis(id)
 );

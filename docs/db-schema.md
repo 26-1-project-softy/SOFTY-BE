@@ -7,7 +7,7 @@
 
 - `CREATE EXTENSION IF NOT EXISTS vector`
 
-## 2. 테이블 목록 (총 15개)
+## 2. 테이블 목록 (총 16개)
 
 - `users`
 - `social_account`
@@ -24,6 +24,7 @@
 - `pdf_file`
 - `model_training_history`
 - `ai_feedback`
+- `message_analysis`
 
 ## 3. 공통 컬럼
 
@@ -108,8 +109,14 @@
 
 ### `ai_feedback`
 - PK: `id`
-- FK: `message_id -> message.id` (NOT NULL)
+- FK: `message_analysis_id -> message_analysis.id` (NOT NULL)
 - 컬럼: `type`, `actual_risk_score`
+
+### `message_analysis`
+- PK: `id`
+- FK: `chat_room_id -> chat_room.id` (NOT NULL)
+- FK: `teacher_id -> users.id` (NOT NULL)
+- 컬럼: `original_content`, `risk_level`, `recommended_message`, `expires_at`
 
 ## 5. 관계 요약
 
@@ -126,8 +133,10 @@
 - `chat_room (1) - (N) chat_room_user_map`
 - `chat_room (1) - (N) message`
 - `chat_room (1) - (N) pdf_file`
+- `chat_room (1) - (N) message_analysis`
 - `message (1) - (N) ai_recommendation`
-- `message (1) - (N) ai_feedback`
+- `message_analysis (1) - (N) ai_feedback`
+- `users (1) - (N) message_analysis` (`teacher_id`)
 
 ## 6. 참고
 
