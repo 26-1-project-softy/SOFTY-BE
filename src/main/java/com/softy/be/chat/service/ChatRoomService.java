@@ -10,15 +10,19 @@ import com.softy.be.chat.dto.InitMessageIntentData;
 import com.softy.be.chat.dto.InitMessageIntentRequest;
 import com.softy.be.chat.dto.InitMessageSendData;
 import com.softy.be.chat.dto.InitMessageSendRequest;
+import com.softy.be.chat.dto.TeacherMessageAnalyzeData;
+import com.softy.be.chat.dto.TeacherMessageAnalyzeRequest;
 import com.softy.be.chat.dto.TeacherWorkingHoursStatusData;
 import com.softy.be.chat.entity.ChatRoom;
 import com.softy.be.chat.entity.ChatRoomStatus;
 import com.softy.be.chat.entity.ChatRoomUserMap;
 import com.softy.be.chat.entity.Message;
+import com.softy.be.chat.entity.MessageAnalysis;
 import com.softy.be.chat.repository.ChatRoomDetailRow;
 import com.softy.be.chat.repository.ChatRoomListRow;
 import com.softy.be.chat.repository.ChatRoomRepository;
 import com.softy.be.chat.repository.ChatRoomUserMapRepository;
+import com.softy.be.chat.repository.MessageAnalysisRepository;
 import com.softy.be.chat.repository.MessageRepository;
 import com.softy.be.school.entity.ParentStudent;
 import com.softy.be.school.entity.TeacherSetting;
@@ -40,6 +44,7 @@ import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Locale;
 
 @Service
 @RequiredArgsConstructor
@@ -48,6 +53,7 @@ public class ChatRoomService {
     private static final String ROLE_PARENT = "PARENT";
     private static final String ROLE_TEACHER = "TEACHER";
     private static final String MESSAGE_TYPE_TEXT = "TEXT";
+    private static final String RISK_LEVEL_UNSAFE = "UNSAFE";
     private static final ZoneId SEOUL_ZONE_ID = ZoneId.of("Asia/Seoul");
     private static final int MAX_PAGE_SIZE = 100;
 
@@ -56,8 +62,10 @@ public class ChatRoomService {
     private final TeacherSettingRepository teacherSettingRepository;
     private final ChatRoomRepository chatRoomRepository;
     private final ChatRoomUserMapRepository chatRoomUserMapRepository;
+    private final MessageAnalysisRepository messageAnalysisRepository;
     private final MessageRepository messageRepository;
     private final IntentClassificationClient intentClassificationClient;
+    private final TeacherMessageAnalysisClient teacherMessageAnalysisClient;
 
     @Transactional(readOnly = true)
     public ChatRoomDetailData getChatRoomDetail(Long userId, Long chatRoomId) {
@@ -94,6 +102,48 @@ public class ChatRoomService {
                 nullToEmpty(row.getStudentName()),
                 nullToEmpty(row.getIntentLabel()),
                 nullToEmpty(row.getStatus())
+        );
+    }
+
+    @Transactional
+    public TeacherMessageAnalyzeData analyzeTeacherMessage(Long userId, Long chatRoomId, TeacherMessageAnalyzeRequest request) {
+        if (chatRoomId == null || chatRoomId <= 0) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "chatRoomId는 1 이상이어야 합니다.");
+        }
+        validateTeacherMessageAnalyzeRequest(request);
+
+        User teacher = getTeacherUser(userId);
+        ChatRoomUserMap mapping = getChatRoomParticipantMapping(chatRoomId, userId);
+
+        String originalContent = request.content().trim();
+        String riskLevel = teacherMessageAnalysisClient.detectRisk(originalContent);
+        if (isBlank(riskLevel)) {
+            throw new ResponseStatusException(HttpStatus.BAD_GATEWAY, "AI 분쟁 가능성 분석에 실패했습니다.");
+        }
+
+        String normalizedRiskLevel = riskLevel.trim().toUpperCase(Locale.ROOT);
+        String recommendedMessage = null;
+        if (RISK_LEVEL_UNSAFE.equals(normalizedRiskLevel)) {
+            recommendedMessage = teacherMessageAnalysisClient.recommendAlternative(originalContent);
+            if (isBlank(recommendedMessage)) {
+                throw new ResponseStatusException(HttpStatus.BAD_GATEWAY, "AI 추천 문장 생성에 실패했습니다.");
+            }
+            recommendedMessage = recommendedMessage.trim();
+        }
+
+        MessageAnalysis analysis = messageAnalysisRepository.save(MessageAnalysis.create(
+                mapping.getChatRoom(),
+                teacher,
+                originalContent,
+                normalizedRiskLevel,
+                recommendedMessage,
+                LocalDateTime.now().plusMinutes(30)
+        ));
+
+        return new TeacherMessageAnalyzeData(
+                analysis.getId(),
+                analysis.getRiskLevel(),
+                analysis.getRecommendedMessage()
         );
     }
 
@@ -281,6 +331,24 @@ public class ChatRoomService {
         return new ParentTeacherLink(parent, mapping.getStudent().getClassroom().getTeacher());
     }
 
+    private User getTeacherUser(Long userId) {
+        User teacher = userRepository.findById(userId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "사용자를 찾을 수 없습니다."));
+
+        if (!ROLE_TEACHER.equalsIgnoreCase(teacher.getRole())) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "교사 계정만 요청할 수 있습니다.");
+        }
+        return teacher;
+    }
+
+    private ChatRoomUserMap getChatRoomParticipantMapping(Long chatRoomId, Long userId) {
+        chatRoomRepository.findById(chatRoomId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "채팅방을 찾을 수 없습니다."));
+
+        return chatRoomUserMapRepository.findByChatRoomIdAndUserId(chatRoomId, userId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.FORBIDDEN, "해당 채팅방에 접근할 권한이 없습니다."));
+    }
+
     private void validateIntentRequest(InitMessageIntentRequest request) {
         if (request == null) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "요청 본문이 필요합니다.");
@@ -299,6 +367,15 @@ public class ChatRoomService {
         }
         if (isBlank(request.intentLabel())) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "intentLabel은 필수입니다.");
+        }
+    }
+
+    private void validateTeacherMessageAnalyzeRequest(TeacherMessageAnalyzeRequest request) {
+        if (request == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "요청 본문이 필요합니다.");
+        }
+        if (isBlank(request.content())) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "content는 필수입니다.");
         }
     }
 
