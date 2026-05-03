@@ -10,9 +10,11 @@ import com.softy.be.chat.dto.InitMessageIntentData;
 import com.softy.be.chat.dto.InitMessageIntentRequest;
 import com.softy.be.chat.dto.InitMessageSendData;
 import com.softy.be.chat.dto.InitMessageSendRequest;
+import com.softy.be.chat.dto.TeacherMessageAnalyzeFeedbackRequest;
 import com.softy.be.chat.dto.TeacherMessageAnalyzeData;
 import com.softy.be.chat.dto.TeacherMessageAnalyzeRequest;
 import com.softy.be.chat.dto.TeacherWorkingHoursStatusData;
+import com.softy.be.chat.entity.AiFeedback;
 import com.softy.be.chat.entity.ChatRoom;
 import com.softy.be.chat.entity.ChatRoomStatus;
 import com.softy.be.chat.entity.ChatRoomUserMap;
@@ -20,6 +22,7 @@ import com.softy.be.chat.entity.Message;
 import com.softy.be.chat.entity.MessageAnalysis;
 import com.softy.be.chat.repository.ChatRoomDetailRow;
 import com.softy.be.chat.repository.ChatRoomListRow;
+import com.softy.be.chat.repository.AiFeedbackRepository;
 import com.softy.be.chat.repository.ChatRoomRepository;
 import com.softy.be.chat.repository.ChatRoomUserMapRepository;
 import com.softy.be.chat.repository.MessageAnalysisRepository;
@@ -53,6 +56,7 @@ public class ChatRoomService {
     private static final String ROLE_PARENT = "PARENT";
     private static final String ROLE_TEACHER = "TEACHER";
     private static final String MESSAGE_TYPE_TEXT = "TEXT";
+    private static final String AI_FEEDBACK_TYPE_RISK_ANALYSIS = "RISK_ANALYSIS";
     private static final String RISK_LEVEL_UNSAFE = "UNSAFE";
     private static final ZoneId SEOUL_ZONE_ID = ZoneId.of("Asia/Seoul");
     private static final int MAX_PAGE_SIZE = 100;
@@ -62,6 +66,7 @@ public class ChatRoomService {
     private final TeacherSettingRepository teacherSettingRepository;
     private final ChatRoomRepository chatRoomRepository;
     private final ChatRoomUserMapRepository chatRoomUserMapRepository;
+    private final AiFeedbackRepository aiFeedbackRepository;
     private final MessageAnalysisRepository messageAnalysisRepository;
     private final MessageRepository messageRepository;
     private final IntentClassificationClient intentClassificationClient;
@@ -145,6 +150,28 @@ public class ChatRoomService {
                 analysis.getRiskLevel(),
                 analysis.getRecommendedMessage()
         );
+    }
+
+    @Transactional
+    public void saveTeacherMessageAnalyzeFeedback(Long userId, Long analysisId, TeacherMessageAnalyzeFeedbackRequest request) {
+        if (analysisId == null || analysisId <= 0) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "analysisId는 1 이상이어야 합니다.");
+        }
+        validateTeacherMessageAnalyzeFeedbackRequest(request);
+
+        User teacher = getTeacherUser(userId);
+        MessageAnalysis analysis = messageAnalysisRepository.findById(analysisId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "메시지 분석 결과를 찾을 수 없습니다."));
+
+        if (!analysis.getTeacher().getId().equals(teacher.getId())) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "본인의 메시지 분석 결과에만 피드백을 남길 수 있습니다.");
+        }
+
+        AiFeedback feedback = aiFeedbackRepository.findFirstByMessageAnalysisId(analysis.getId())
+                .orElseGet(() -> AiFeedback.create(analysis, AI_FEEDBACK_TYPE_RISK_ANALYSIS, request.score()));
+
+        feedback.updateScore(request.score());
+        aiFeedbackRepository.save(feedback);
     }
 
     @Transactional
@@ -376,6 +403,18 @@ public class ChatRoomService {
         }
         if (isBlank(request.content())) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "content는 필수입니다.");
+        }
+    }
+
+    private void validateTeacherMessageAnalyzeFeedbackRequest(TeacherMessageAnalyzeFeedbackRequest request) {
+        if (request == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "요청 본문이 필요합니다.");
+        }
+        if (request.score() == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "score는 필수입니다.");
+        }
+        if (request.score() < 1 || request.score() > 5) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "score는 1부터 5 사이여야 합니다.");
         }
     }
 
