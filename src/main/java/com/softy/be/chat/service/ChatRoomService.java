@@ -10,6 +10,7 @@ import com.softy.be.chat.dto.InitMessageIntentData;
 import com.softy.be.chat.dto.InitMessageIntentRequest;
 import com.softy.be.chat.dto.InitMessageSendData;
 import com.softy.be.chat.dto.InitMessageSendRequest;
+import com.softy.be.chat.dto.TeacherWorkingHoursStatusData;
 import com.softy.be.chat.entity.ChatRoom;
 import com.softy.be.chat.entity.ChatRoomStatus;
 import com.softy.be.chat.entity.ChatRoomUserMap;
@@ -221,11 +222,16 @@ public class ChatRoomService {
     @Transactional(readOnly = true)
     public InitMessageIntentData analyzeInitMessageIntent(Long userId, InitMessageIntentRequest request) {
         validateIntentRequest(request);
-        ParentTeacherLink link = resolveParentTeacherLink(userId);
+        resolveParentTeacherLink(userId);
 
         String intentLabel = intentClassificationClient.classifyIntent(request.content().trim());
-        boolean isInWorkingHours = isTeacherInWorkingHours(link.teacher().getId());
-        return new InitMessageIntentData(intentLabel, isInWorkingHours);
+        return new InitMessageIntentData(intentLabel);
+    }
+
+    @Transactional(readOnly = true)
+    public TeacherWorkingHoursStatusData getTeacherWorkingHoursStatus(Long userId) {
+        ParentTeacherLink link = resolveParentTeacherLink(userId);
+        return new TeacherWorkingHoursStatusData(isTeacherInWorkingHours(link.teacher().getId()));
     }
 
     @Transactional
