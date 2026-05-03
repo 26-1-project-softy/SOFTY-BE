@@ -50,4 +50,8 @@ public class ChatRoomUserMap extends BaseEntity {
         this.unreadCount = 0;
         this.lastReadAt = readAt;
     }
+
+    public void increaseUnreadCount() {
+        this.unreadCount += 1;
+    }
 }
