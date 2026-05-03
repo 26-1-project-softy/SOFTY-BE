@@ -43,6 +43,9 @@ public class MessageAnalysis extends BaseEntity {
     @Column(name = "recommended_message", columnDefinition = "TEXT")
     private String recommendedMessage;
 
+    @Column(name = "is_recommendation_adopted", nullable = false)
+    private Boolean recommendationAdopted;
+
     @Column(name = "expires_at")
     private LocalDateTime expiresAt;
 
@@ -60,8 +63,13 @@ public class MessageAnalysis extends BaseEntity {
         analysis.originalContent = originalContent;
         analysis.riskLevel = riskLevel;
         analysis.recommendedMessage = recommendedMessage;
+        analysis.recommendationAdopted = false;
         analysis.expiresAt = expiresAt;
         return analysis;
+    }
+
+    public void markRecommendationAdopted() {
+        this.recommendationAdopted = true;
     }
 
 }

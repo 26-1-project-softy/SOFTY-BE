@@ -175,6 +175,26 @@ public class ChatRoomService {
     }
 
     @Transactional
+    public void saveTeacherMessageRecommendationAdoption(Long userId, Long analysisId) {
+        if (analysisId == null || analysisId <= 0) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "analysisId는 1 이상이어야 합니다.");
+        }
+
+        User teacher = getTeacherUser(userId);
+        MessageAnalysis analysis = messageAnalysisRepository.findById(analysisId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "메시지 분석 결과를 찾을 수 없습니다."));
+
+        if (!analysis.getTeacher().getId().equals(teacher.getId())) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "본인의 메시지 분석 결과에만 추천문장 적용을 기록할 수 있습니다.");
+        }
+        if (isBlank(analysis.getRecommendedMessage())) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "추천문장이 없는 분석 결과에는 적용을 기록할 수 없습니다.");
+        }
+
+        analysis.markRecommendationAdopted();
+    }
+
+    @Transactional
     public ChatRoomReadData markChatRoomAsRead(Long userId, Long chatRoomId) {
         if (chatRoomId == null || chatRoomId <= 0) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "chatRoomId는 1 이상이어야 합니다.");

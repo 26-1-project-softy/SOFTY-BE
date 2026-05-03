@@ -180,6 +180,7 @@ CREATE TABLE message_analysis (
     original_content TEXT NOT NULL,
     risk_level VARCHAR(20) NOT NULL,
     recommended_message TEXT,
+    is_recommendation_adopted BOOLEAN NOT NULL DEFAULT FALSE,
     expires_at TIMESTAMP,
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
