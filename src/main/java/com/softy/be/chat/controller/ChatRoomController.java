@@ -4,6 +4,8 @@ import com.softy.be.auth.security.AuthenticatedUserPrincipal;
 import com.softy.be.chat.dto.ChatRoomDetailData;
 import com.softy.be.chat.dto.ChatRoomListData;
 import com.softy.be.chat.dto.ChatRoomMessageListData;
+import com.softy.be.chat.dto.ChatRoomMessageSendData;
+import com.softy.be.chat.dto.ChatRoomMessageSendRequest;
 import com.softy.be.chat.dto.ChatRoomReadData;
 import com.softy.be.chat.dto.InitMessageIntentData;
 import com.softy.be.chat.dto.InitMessageIntentRequest;
@@ -75,6 +77,28 @@ public class ChatRoomController {
         );
 
         return ResponseEntity.ok(response);
+    }
+
+    @PostMapping("/{chatRoomId}/messages")
+    @Operation(
+            summary = "채팅 메시지 전송",
+            description = "학부모 또는 교사가 채팅방 상세 화면에서 텍스트 메시지를 전송합니다."
+    )
+    public ResponseEntity<ApiResponse<ChatRoomMessageSendData>> sendChatRoomMessage(
+            @AuthenticationPrincipal AuthenticatedUserPrincipal principal,
+            @PathVariable("chatRoomId") Long chatRoomId,
+            @RequestBody ChatRoomMessageSendRequest request
+    ) {
+        ChatRoomMessageSendData data = chatRoomService.sendChatRoomMessage(principal.userId(), chatRoomId, request);
+
+        ApiResponse<ChatRoomMessageSendData> response = ApiResponse.of(
+                true,
+                201,
+                "메시지가 전송되었습니다.",
+                data
+        );
+
+        return ResponseEntity.status(201).body(response);
     }
 
     @PostMapping("/{chatRoomId}/read")

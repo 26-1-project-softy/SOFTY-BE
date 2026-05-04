@@ -5,6 +5,8 @@ import com.softy.be.chat.dto.ChatRoomListData;
 import com.softy.be.chat.dto.ChatRoomListItemData;
 import com.softy.be.chat.dto.ChatRoomMessageItemData;
 import com.softy.be.chat.dto.ChatRoomMessageListData;
+import com.softy.be.chat.dto.ChatRoomMessageSendData;
+import com.softy.be.chat.dto.ChatRoomMessageSendRequest;
 import com.softy.be.chat.dto.ChatRoomReadData;
 import com.softy.be.chat.dto.InitMessageIntentData;
 import com.softy.be.chat.dto.InitMessageIntentRequest;
@@ -94,6 +96,53 @@ public class ChatRoomService {
                 nullToEmpty(row.getStudentName()),
                 nullToEmpty(row.getIntentLabel()),
                 nullToEmpty(row.getStatus())
+        );
+    }
+
+    @Transactional
+    public ChatRoomMessageSendData sendChatRoomMessage(Long userId, Long chatRoomId, ChatRoomMessageSendRequest request) {
+        if (chatRoomId == null || chatRoomId <= 0) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "chatRoomId는 1 이상이어야 합니다.");
+        }
+        validateChatRoomMessageSendRequest(request);
+
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "사용자를 찾을 수 없습니다."));
+
+        if (!ROLE_PARENT.equalsIgnoreCase(user.getRole()) && !ROLE_TEACHER.equalsIgnoreCase(user.getRole())) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "학부모 계정만 메시지를 전송할 수 있습니다.");
+        }
+
+        chatRoomRepository.findById(chatRoomId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "채팅방을 찾을 수 없습니다."));
+
+        List<ChatRoomUserMap> mappings = chatRoomUserMapRepository.findAllByChatRoomId(chatRoomId);
+        ChatRoomUserMap senderMapping = mappings.stream()
+                .filter(mapping -> mapping.getUser().getId().equals(userId))
+                .findFirst()
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.FORBIDDEN, "해당 채팅방에 접근할 권한이 없습니다."));
+
+        ChatRoomUserMap receiverMapping = mappings.stream()
+                .filter(mapping -> !mapping.getUser().getId().equals(userId))
+                .findFirst()
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "메시지를 받을 상대방을 찾을 수 없습니다."));
+
+        LocalDateTime now = LocalDateTime.now();
+        senderMapping.markAsRead(now);
+        receiverMapping.increaseUnreadCount();
+
+        Message message = messageRepository.save(Message.create(
+                MESSAGE_TYPE_TEXT,
+                request.content().trim(),
+                senderMapping.getChatRoom(),
+                user
+        ));
+
+        return new ChatRoomMessageSendData(
+                message.getId(),
+                senderMapping.getChatRoom().getId(),
+                message.getContent(),
+                message.getCreatedAt()
         );
     }
 
@@ -299,6 +348,15 @@ public class ChatRoomService {
         }
         if (isBlank(request.intentLabel())) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "intentLabel은 필수입니다.");
+        }
+    }
+
+    private void validateChatRoomMessageSendRequest(ChatRoomMessageSendRequest request) {
+        if (request == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "요청 본문이 필요합니다.");
+        }
+        if (isBlank(request.content())) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "content는 필수입니다.");
         }
     }
 
