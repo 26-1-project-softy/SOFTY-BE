@@ -107,8 +107,8 @@ public class ChatRoomController {
 
     @PostMapping("/{chatRoomId}/messages")
     @Operation(
-            summary = "일반 채팅 메시지 전송",
-            description = "학부모 또는 교사가 채팅방 상세 화면에서 일반 텍스트 메시지를 전송합니다."
+            summary = "학부모 채팅 메시지 전송",
+            description = "학부모가 채팅방 상세 화면에서 일반 텍스트 메시지를 전송합니다."
     )
     public ResponseEntity<ApiResponse<ChatRoomMessageSendData>> sendChatRoomMessage(
             @AuthenticationPrincipal AuthenticatedUserPrincipal principal,
