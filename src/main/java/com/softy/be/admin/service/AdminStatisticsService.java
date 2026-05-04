@@ -101,6 +101,7 @@ public class AdminStatisticsService {
                 nullToZero(result.recall()),
                 nullToZero(result.f1Score()),
                 nullToEmpty(result.status()),
+                result.progressPercent(),
                 result.passed(),
                 nullToEmpty(result.version()),
                 result.resultCode(),
