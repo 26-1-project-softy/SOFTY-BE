@@ -4,11 +4,18 @@ import com.softy.be.auth.security.AuthenticatedUserPrincipal;
 import com.softy.be.chat.dto.ChatRoomDetailData;
 import com.softy.be.chat.dto.ChatRoomListData;
 import com.softy.be.chat.dto.ChatRoomMessageListData;
+import com.softy.be.chat.dto.ChatRoomMessageSendData;
+import com.softy.be.chat.dto.ChatRoomMessageSendRequest;
 import com.softy.be.chat.dto.ChatRoomReadData;
 import com.softy.be.chat.dto.InitMessageIntentData;
 import com.softy.be.chat.dto.InitMessageIntentRequest;
 import com.softy.be.chat.dto.InitMessageSendData;
 import com.softy.be.chat.dto.InitMessageSendRequest;
+import com.softy.be.chat.dto.TeacherMessageAnalyzeData;
+import com.softy.be.chat.dto.TeacherMessageAnalyzeRequest;
+import com.softy.be.chat.dto.TeacherMessageSendData;
+import com.softy.be.chat.dto.TeacherMessageSendRequest;
+import com.softy.be.chat.dto.TeacherWorkingHoursStatusData;
 import com.softy.be.chat.service.ChatRoomService;
 import com.softy.be.common.api.ApiResponse;
 import io.swagger.v3.oas.annotations.Operation;
@@ -76,6 +83,72 @@ public class ChatRoomController {
         return ResponseEntity.ok(response);
     }
 
+    @PostMapping("/{chatRoomId}/messages/analyze")
+    @Operation(
+            summary = "교사 메시지 분석",
+            description = "교사가 전송 전 작성한 메시지를 AI가 분석하여 분쟁 가능성과 추천 문장을 반환합니다."
+    )
+    public ResponseEntity<ApiResponse<TeacherMessageAnalyzeData>> analyzeTeacherMessage(
+            @AuthenticationPrincipal AuthenticatedUserPrincipal principal,
+            @PathVariable("chatRoomId") Long chatRoomId,
+            @RequestBody TeacherMessageAnalyzeRequest request
+    ) {
+        TeacherMessageAnalyzeData data = chatRoomService.analyzeTeacherMessage(principal.userId(), chatRoomId, request);
+
+        ApiResponse<TeacherMessageAnalyzeData> response = ApiResponse.of(
+                true,
+                200,
+                "메시지 분석이 완료되었습니다.",
+                data
+        );
+
+        return ResponseEntity.ok(response);
+    }
+
+    @PostMapping("/{chatRoomId}/messages")
+    @Operation(
+            summary = "채팅 메시지 전송",
+            description = "학부모 또는 교사가 채팅방 상세 화면에서 텍스트 메시지를 전송합니다."
+    )
+    public ResponseEntity<ApiResponse<ChatRoomMessageSendData>> sendChatRoomMessage(
+            @AuthenticationPrincipal AuthenticatedUserPrincipal principal,
+            @PathVariable("chatRoomId") Long chatRoomId,
+            @RequestBody ChatRoomMessageSendRequest request
+    ) {
+        ChatRoomMessageSendData data = chatRoomService.sendChatRoomMessage(principal.userId(), chatRoomId, request);
+
+        ApiResponse<ChatRoomMessageSendData> response = ApiResponse.of(
+                true,
+                201,
+                "메시지가 전송되었습니다.",
+                data
+        );
+
+        return ResponseEntity.status(201).body(response);
+    }
+
+    @PostMapping("/{chatRoomId}/messages/teacher")
+    @Operation(
+            summary = "교사 최종 메시지 전송",
+            description = "교사가 AI 분석 결과를 참고해 최종 메시지를 전송합니다."
+    )
+    public ResponseEntity<ApiResponse<TeacherMessageSendData>> sendTeacherMessage(
+            @AuthenticationPrincipal AuthenticatedUserPrincipal principal,
+            @PathVariable("chatRoomId") Long chatRoomId,
+            @RequestBody TeacherMessageSendRequest request
+    ) {
+        TeacherMessageSendData data = chatRoomService.sendTeacherMessage(principal.userId(), chatRoomId, request);
+
+        ApiResponse<TeacherMessageSendData> response = ApiResponse.of(
+                true,
+                201,
+                "메시지가 전송되었습니다.",
+                data
+        );
+
+        return ResponseEntity.status(201).body(response);
+    }
+
     @PostMapping("/{chatRoomId}/read")
     @Operation(
             summary = "채팅방 읽음 처리",
@@ -138,6 +211,26 @@ public class ChatRoomController {
                 true,
                 200,
                 message,
+                data
+        );
+
+        return ResponseEntity.ok(response);
+    }
+
+    @GetMapping("/working-hours")
+    @Operation(
+            summary = "교사 근무시간 상태 조회",
+            description = "학부모에게 매핑된 교사가 현재 근무시간 이내인지 반환합니다."
+    )
+    public ResponseEntity<ApiResponse<TeacherWorkingHoursStatusData>> getTeacherWorkingHoursStatus(
+            @AuthenticationPrincipal AuthenticatedUserPrincipal principal
+    ) {
+        TeacherWorkingHoursStatusData data = chatRoomService.getTeacherWorkingHoursStatus(principal.userId());
+
+        ApiResponse<TeacherWorkingHoursStatusData> response = ApiResponse.of(
+                true,
+                200,
+                "교사 근무시간 정보 조회에 성공했습니다.",
                 data
         );
 

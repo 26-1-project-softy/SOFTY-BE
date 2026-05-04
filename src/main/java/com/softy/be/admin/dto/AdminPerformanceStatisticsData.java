@@ -6,6 +6,7 @@ public record AdminPerformanceStatisticsData(
         double recall,
         double f1Score,
         String status,
+        Integer progressPercent,
         Boolean passed,
         String version,
         Integer resultCode,
