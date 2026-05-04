@@ -41,8 +41,8 @@ public class ChatRoomController {
 
     @GetMapping("/{chatRoomId}")
     @Operation(
-            summary = "채팅방 상세 정보 조회",
-            description = "로그인한 학부모 또는 교사가 참여 중인 특정 채팅방의 상세 정보를 조회합니다."
+            summary = "채팅방 상세 조회",
+            description = "로그인한 학부모 또는 교사가 참여 중인 채팅방의 상세 정보를 조회합니다."
     )
     public ResponseEntity<ApiResponse<ChatRoomDetailData>> getChatRoomDetail(
             @AuthenticationPrincipal AuthenticatedUserPrincipal principal,
@@ -62,8 +62,8 @@ public class ChatRoomController {
 
     @GetMapping("/{chatRoomId}/messages")
     @Operation(
-            summary = "채팅방 메시지 목록 조회",
-            description = "로그인한 학부모 또는 교사가 참여 중인 특정 채팅방의 메시지 목록을 커서 기반으로 조회합니다."
+            summary = "채팅 메시지 목록 조회",
+            description = "로그인한 학부모 또는 교사가 참여 중인 채팅방의 메시지 목록을 커서 기반으로 조회합니다."
     )
     public ResponseEntity<ApiResponse<ChatRoomMessageListData>> getChatRoomMessages(
             @AuthenticationPrincipal AuthenticatedUserPrincipal principal,
@@ -83,7 +83,7 @@ public class ChatRoomController {
         return ResponseEntity.ok(response);
     }
 
-    @PostMapping("/{chatRoomId}/messages/analyze")
+    @PostMapping("/{chatRoomId}/teacher-messages/analyze")
     @Operation(
             summary = "교사 메시지 분석",
             description = "교사가 전송 전 작성한 메시지를 AI가 분석하여 분쟁 가능성과 추천 문장을 반환합니다."
@@ -107,8 +107,8 @@ public class ChatRoomController {
 
     @PostMapping("/{chatRoomId}/messages")
     @Operation(
-            summary = "채팅 메시지 전송",
-            description = "학부모 또는 교사가 채팅방 상세 화면에서 텍스트 메시지를 전송합니다."
+            summary = "학부모 채팅 메시지 전송",
+            description = "학부모가 채팅방 상세 화면에서 일반 텍스트 메시지를 전송합니다."
     )
     public ResponseEntity<ApiResponse<ChatRoomMessageSendData>> sendChatRoomMessage(
             @AuthenticationPrincipal AuthenticatedUserPrincipal principal,
@@ -127,7 +127,7 @@ public class ChatRoomController {
         return ResponseEntity.status(201).body(response);
     }
 
-    @PostMapping("/{chatRoomId}/messages/teacher")
+    @PostMapping("/{chatRoomId}/teacher-messages")
     @Operation(
             summary = "교사 최종 메시지 전송",
             description = "교사가 AI 분석 결과를 참고해 최종 메시지를 전송합니다."
@@ -220,7 +220,7 @@ public class ChatRoomController {
     @GetMapping("/working-hours")
     @Operation(
             summary = "교사 근무시간 상태 조회",
-            description = "학부모에게 매핑된 교사가 현재 근무시간 이내인지 반환합니다."
+            description = "학부모에게 매핑된 교사가 현재 근무시간 내인지 반환합니다."
     )
     public ResponseEntity<ApiResponse<TeacherWorkingHoursStatusData>> getTeacherWorkingHoursStatus(
             @AuthenticationPrincipal AuthenticatedUserPrincipal principal

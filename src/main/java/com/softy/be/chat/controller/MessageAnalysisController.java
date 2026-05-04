@@ -19,9 +19,9 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
-@RequestMapping("/message-analyses")
+@RequestMapping("/teacher-message-analyses")
 @RequiredArgsConstructor
-@Tag(name = "메시지 분석", description = "교사 메시지 분석 결과 관련 API")
+@Tag(name = "교사 메시지 분석", description = "교사 메시지 분석 결과 관련 API")
 public class MessageAnalysisController {
 
     private final ChatRoomService chatRoomService;
@@ -29,7 +29,7 @@ public class MessageAnalysisController {
     @PutMapping("/{analysisId}/feedback")
     @Operation(
             summary = "교사 메시지 분석 피드백 저장",
-            description = "교사가 본인 메시지 분석 결과에 대해 1점부터 5점까지 피드백을 저장하거나 수정합니다."
+            description = "교사가 본인 메시지 분석 결과에 대해 1점부터 5점까지 피드백을 남기거나 수정합니다."
     )
     public ResponseEntity<ApiResponse<Void>> saveTeacherMessageAnalyzeFeedback(
             @AuthenticationPrincipal AuthenticatedUserPrincipal principal,

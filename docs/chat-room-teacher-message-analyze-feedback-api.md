@@ -1,6 +1,6 @@
 # 교사 메시지 분석 피드백 저장 API
 
-- 엔드포인트: `PUT /message-analyses/{analysisId}/feedback`
+- 엔드포인트: `PUT /teacher-message-analyses/{analysisId}/feedback`
 - 목적: 교사가 AI 메시지 분석 결과에 대해 1~5점 피드백을 남긴다.
 - 부수 동작:
   - 해당 분석 결과의 피드백 점수를 저장한다.

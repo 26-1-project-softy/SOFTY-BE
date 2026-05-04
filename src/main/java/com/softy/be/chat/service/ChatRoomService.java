@@ -252,8 +252,8 @@ public class ChatRoomService {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "사용자를 찾을 수 없습니다."));
 
-        if (!ROLE_PARENT.equalsIgnoreCase(user.getRole()) && !ROLE_TEACHER.equalsIgnoreCase(user.getRole())) {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "학부모 또는 교사 계정만 메시지를 전송할 수 있습니다.");
+        if (!ROLE_PARENT.equalsIgnoreCase(user.getRole())) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "학부모 계정만 메시지를 전송할 수 있습니다.");
         }
 
         chatRoomRepository.findById(chatRoomId)

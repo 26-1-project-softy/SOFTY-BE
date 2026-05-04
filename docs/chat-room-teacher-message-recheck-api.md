@@ -1,6 +1,6 @@
 # 교사 수정 메시지 재분석 API
 
-- 엔드포인트: `POST /message-analyses/{analysisId}/recheck`
+- 엔드포인트: `POST /teacher-message-analyses/{analysisId}/recheck`
 - 목적: 교사가 추천문장을 수정한 뒤, 최종 전송 전에 수정된 문장을 다시 AI로 분석한다.
 - 부수 동작:
   - 수정된 문장을 기준으로 분쟁 가능성을 다시 분석한다.
