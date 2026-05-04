@@ -16,6 +16,10 @@ public class AiEvaluationApiResponse {
 
     public String version;
     public String status;
+
+    @JsonProperty("progress_percent")
+    public Integer progressPercent;
+
     public Double precision;
     public Double recall;
 
