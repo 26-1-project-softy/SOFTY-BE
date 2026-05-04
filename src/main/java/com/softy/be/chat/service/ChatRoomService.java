@@ -124,37 +124,25 @@ public class ChatRoomService {
 
         User teacher = getTeacherUser(userId);
         ChatRoomUserMap mapping = getChatRoomParticipantMapping(chatRoomId, userId);
+        return analyzeTeacherMessageContent(teacher, mapping.getChatRoom(), request.content().trim());
+    }
 
-        String originalContent = request.content().trim();
-        String riskLevel = teacherMessageAnalysisClient.detectRisk(originalContent);
-        if (isBlank(riskLevel)) {
-            throw new ResponseStatusException(HttpStatus.BAD_GATEWAY, "AI 분쟁 가능성 분석에 실패했습니다.");
+    @Transactional
+    public TeacherMessageAnalyzeData recheckTeacherMessage(Long userId, Long analysisId, TeacherMessageAnalyzeRequest request) {
+        if (analysisId == null || analysisId <= 0) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "analysisId는 1 이상이어야 합니다.");
+        }
+        validateTeacherMessageAnalyzeRequest(request);
+
+        User teacher = getTeacherUser(userId);
+        MessageAnalysis baseAnalysis = messageAnalysisRepository.findById(analysisId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "메시지 분석 결과를 찾을 수 없습니다."));
+
+        if (!baseAnalysis.getTeacher().getId().equals(teacher.getId())) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "본인의 메시지 분석 결과만 재분석할 수 있습니다.");
         }
 
-        String normalizedRiskLevel = riskLevel.trim().toUpperCase(Locale.ROOT);
-        String recommendedMessage = null;
-        if (RISK_LEVEL_UNSAFE.equals(normalizedRiskLevel)) {
-            recommendedMessage = teacherMessageAnalysisClient.recommendAlternative(originalContent);
-            if (isBlank(recommendedMessage)) {
-                throw new ResponseStatusException(HttpStatus.BAD_GATEWAY, "AI 추천 문장 생성에 실패했습니다.");
-            }
-            recommendedMessage = recommendedMessage.trim();
-        }
-
-        MessageAnalysis analysis = messageAnalysisRepository.save(MessageAnalysis.create(
-                mapping.getChatRoom(),
-                teacher,
-                originalContent,
-                normalizedRiskLevel,
-                recommendedMessage,
-                LocalDateTime.now().plusMinutes(30)
-        ));
-
-        return new TeacherMessageAnalyzeData(
-                analysis.getId(),
-                analysis.getRiskLevel(),
-                analysis.getRecommendedMessage()
-        );
+        return analyzeTeacherMessageContent(teacher, baseAnalysis.getChatRoom(), request.content().trim());
     }
 
     @Transactional
@@ -506,6 +494,38 @@ public class ChatRoomService {
         if (isBlank(request.content())) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "content는 필수입니다.");
         }
+    }
+
+    private TeacherMessageAnalyzeData analyzeTeacherMessageContent(User teacher, ChatRoom chatRoom, String originalContent) {
+        String riskLevel = teacherMessageAnalysisClient.detectRisk(originalContent);
+        if (isBlank(riskLevel)) {
+            throw new ResponseStatusException(HttpStatus.BAD_GATEWAY, "AI 분쟁 가능성 분석에 실패했습니다.");
+        }
+
+        String normalizedRiskLevel = riskLevel.trim().toUpperCase(Locale.ROOT);
+        String recommendedMessage = null;
+        if (RISK_LEVEL_UNSAFE.equals(normalizedRiskLevel)) {
+            recommendedMessage = teacherMessageAnalysisClient.recommendAlternative(originalContent);
+            if (isBlank(recommendedMessage)) {
+                throw new ResponseStatusException(HttpStatus.BAD_GATEWAY, "AI 추천 문장 생성에 실패했습니다.");
+            }
+            recommendedMessage = recommendedMessage.trim();
+        }
+
+        MessageAnalysis analysis = messageAnalysisRepository.save(MessageAnalysis.create(
+                chatRoom,
+                teacher,
+                originalContent,
+                normalizedRiskLevel,
+                recommendedMessage,
+                LocalDateTime.now().plusMinutes(30)
+        ));
+
+        return new TeacherMessageAnalyzeData(
+                analysis.getId(),
+                analysis.getRiskLevel(),
+                analysis.getRecommendedMessage()
+        );
     }
 
     private boolean isBlank(String value) {

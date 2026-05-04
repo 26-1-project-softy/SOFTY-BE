@@ -2,6 +2,8 @@ package com.softy.be.chat.controller;
 
 import com.softy.be.auth.security.AuthenticatedUserPrincipal;
 import com.softy.be.chat.dto.TeacherMessageAnalyzeFeedbackRequest;
+import com.softy.be.chat.dto.TeacherMessageAnalyzeData;
+import com.softy.be.chat.dto.TeacherMessageAnalyzeRequest;
 import com.softy.be.chat.service.ChatRoomService;
 import com.softy.be.common.api.ApiResponse;
 import io.swagger.v3.oas.annotations.Operation;
@@ -62,6 +64,28 @@ public class MessageAnalysisController {
                 200,
                 "추천문장 적용이 저장되었습니다.",
                 null
+        );
+
+        return ResponseEntity.ok(response);
+    }
+
+    @PostMapping("/{analysisId}/recheck")
+    @Operation(
+            summary = "교사 수정 메시지 재분석",
+            description = "교사가 추천문장을 수정한 뒤 최종 전송 전에 수정된 문장을 다시 AI로 분석합니다."
+    )
+    public ResponseEntity<ApiResponse<TeacherMessageAnalyzeData>> recheckTeacherMessage(
+            @AuthenticationPrincipal AuthenticatedUserPrincipal principal,
+            @PathVariable("analysisId") Long analysisId,
+            @RequestBody TeacherMessageAnalyzeRequest request
+    ) {
+        TeacherMessageAnalyzeData data = chatRoomService.recheckTeacherMessage(principal.userId(), analysisId, request);
+
+        ApiResponse<TeacherMessageAnalyzeData> response = ApiResponse.of(
+                true,
+                200,
+                "메시지 재분석이 완료되었습니다.",
+                data
         );
 
         return ResponseEntity.ok(response);
