@@ -5,13 +5,19 @@ import com.softy.be.admin.dto.AdminEvaluationRerunRequest;
 import com.softy.be.admin.dto.AdminPdfStatisticsData;
 import com.softy.be.admin.dto.AdminPerformanceStatisticsData;
 import com.softy.be.admin.dto.AdminRecommendationAdoptionData;
+import com.softy.be.admin.dto.AdminRiskFeedbackItemData;
+import com.softy.be.admin.dto.AdminRiskFeedbackListData;
 import com.softy.be.admin.dto.AdminRiskStatisticsData;
 import com.softy.be.admin.dto.AdminTeacherPdfCountData;
+import com.softy.be.chat.repository.AiFeedbackListRow;
+import com.softy.be.chat.repository.AiFeedbackRepository;
 import com.softy.be.chat.repository.AiRecommendationRepository;
 import com.softy.be.chat.repository.MessageRepository;
 import com.softy.be.report.repository.PdfFileRepository;
 import com.softy.be.report.repository.TeacherPdfCountRow;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -23,6 +29,7 @@ public class AdminStatisticsService {
 
     private final PdfFileRepository pdfFileRepository;
     private final MessageRepository messageRepository;
+    private final AiFeedbackRepository aiFeedbackRepository;
     private final AiRecommendationRepository aiRecommendationRepository;
     private final AiEvaluationClient aiEvaluationClient;
 
@@ -59,6 +66,29 @@ public class AdminStatisticsService {
 
         double adoptionRate = calculateAdoptionRate(totalRecommendationCount, totalUsedAsIs, totalModified);
         return new AdminRecommendationAdoptionData(adoptionRate, totalUsedAsIs, totalModified, totalNotUsed);
+    }
+
+    @Transactional(readOnly = true)
+    public AdminRiskFeedbackListData getRiskFeedbacks(int page, int size) {
+        int normalizedPage = Math.max(page, 1);
+        int normalizedSize = Math.max(size, 1);
+
+        Page<AiFeedbackListRow> feedbackPage = aiFeedbackRepository.findRiskFeedbacks(
+                PageRequest.of(normalizedPage - 1, normalizedSize)
+        );
+
+        List<AdminRiskFeedbackItemData> items = feedbackPage.getContent()
+                .stream()
+                .map(this::toRiskFeedbackItemData)
+                .toList();
+
+        return new AdminRiskFeedbackListData(
+                items,
+                normalizedPage,
+                normalizedSize,
+                feedbackPage.getTotalElements(),
+                feedbackPage.getTotalPages()
+        );
     }
 
     @Transactional(readOnly = true)
@@ -115,6 +145,16 @@ public class AdminStatisticsService {
                 teacherId,
                 row.getTeacherName(),
                 pdfCount
+        );
+    }
+
+    private AdminRiskFeedbackItemData toRiskFeedbackItemData(AiFeedbackListRow row) {
+        return new AdminRiskFeedbackItemData(
+                row.getFeedbackId(),
+                row.getTeacherName(),
+                row.getFeedbackResult(),
+                row.getAiRecommendMessage(),
+                row.getCreatedAt()
         );
     }
 
