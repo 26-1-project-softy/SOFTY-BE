@@ -156,23 +156,7 @@ CREATE TABLE pdf_file (
     FOREIGN KEY (chat_room_id) REFERENCES chat_room(id)
 );
 
--- 14. model_training_history
-CREATE TABLE model_training_history (
-    id BIGSERIAL PRIMARY KEY,
-    jobId VARCHAR,
-    evaluation_id VARCHAR,
-    trained_at TIMESTAMP NOT NULL,
-    model_version VARCHAR(50) NOT NULL,
-    dataset_version VARCHAR(50) NOT NULL,
-    f1_score DOUBLE PRECISION,
-    status VARCHAR(20) NOT NULL,
-    is_deployed BOOLEAN DEFAULT FALSE,
-    model_path TEXT,
-    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
-);
-
--- 15. MESSAGE_ANALYSIS
+-- 14. MESSAGE_ANALYSIS
 CREATE TABLE message_analysis (
     id BIGSERIAL PRIMARY KEY,
     chat_room_id BIGINT NOT NULL,
@@ -190,7 +174,7 @@ CREATE TABLE message_analysis (
     FOREIGN KEY (used_message_id) REFERENCES message(id)
 );
 
--- 16. AI_FEEDBACK
+-- 15. AI_FEEDBACK
 CREATE TABLE ai_feedback (
     id BIGSERIAL PRIMARY KEY,
     message_analysis_id BIGINT NOT NULL,

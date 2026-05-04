@@ -7,7 +7,7 @@
 
 - `CREATE EXTENSION IF NOT EXISTS vector`
 
-## 2. 테이블 목록 (총 16개)
+## 2. 테이블 목록 (총 15개)
 
 - `users`
 - `social_account`
@@ -22,7 +22,6 @@
 - `message`
 - `ai_recommendation`
 - `pdf_file`
-- `model_training_history`
 - `ai_feedback`
 - `message_analysis`
 
@@ -101,11 +100,6 @@
 - PK: `id`
 - FK: `chat_room_id -> chat_room.id` (NOT NULL)
 - 컬럼: `file_url`, `file_name`
-
-### `model_training_history`
-- PK: `id`
-- 컬럼: `jobId`, `evaluation_id`, `trained_at`, `model_version`, `dataset_version`, `f1_score`, `status`, `is_deployed`, `model_path`
-- FK: 없음
 
 ### `ai_feedback`
 - PK: `id`
