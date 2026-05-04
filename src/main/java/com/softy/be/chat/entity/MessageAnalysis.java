@@ -46,6 +46,10 @@ public class MessageAnalysis extends BaseEntity {
     @Column(name = "is_recommendation_adopted", nullable = false)
     private Boolean recommendationAdopted;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "used_message_id")
+    private Message usedMessage;
+
     @Column(name = "expires_at")
     private LocalDateTime expiresAt;
 
@@ -70,6 +74,10 @@ public class MessageAnalysis extends BaseEntity {
 
     public void markRecommendationAdopted() {
         this.recommendationAdopted = true;
+    }
+
+    public void linkUsedMessage(Message usedMessage) {
+        this.usedMessage = usedMessage;
     }
 
 }

@@ -13,8 +13,11 @@ import com.softy.be.chat.dto.InitMessageSendRequest;
 import com.softy.be.chat.dto.TeacherMessageAnalyzeFeedbackRequest;
 import com.softy.be.chat.dto.TeacherMessageAnalyzeData;
 import com.softy.be.chat.dto.TeacherMessageAnalyzeRequest;
+import com.softy.be.chat.dto.TeacherMessageSendData;
+import com.softy.be.chat.dto.TeacherMessageSendRequest;
 import com.softy.be.chat.dto.TeacherWorkingHoursStatusData;
 import com.softy.be.chat.entity.AiFeedback;
+import com.softy.be.chat.entity.AiRecommendation;
 import com.softy.be.chat.entity.ChatRoom;
 import com.softy.be.chat.entity.ChatRoomStatus;
 import com.softy.be.chat.entity.ChatRoomUserMap;
@@ -23,6 +26,7 @@ import com.softy.be.chat.entity.MessageAnalysis;
 import com.softy.be.chat.repository.ChatRoomDetailRow;
 import com.softy.be.chat.repository.ChatRoomListRow;
 import com.softy.be.chat.repository.AiFeedbackRepository;
+import com.softy.be.chat.repository.AiRecommendationRepository;
 import com.softy.be.chat.repository.ChatRoomRepository;
 import com.softy.be.chat.repository.ChatRoomUserMapRepository;
 import com.softy.be.chat.repository.MessageAnalysisRepository;
@@ -67,6 +71,7 @@ public class ChatRoomService {
     private final ChatRoomRepository chatRoomRepository;
     private final ChatRoomUserMapRepository chatRoomUserMapRepository;
     private final AiFeedbackRepository aiFeedbackRepository;
+    private final AiRecommendationRepository aiRecommendationRepository;
     private final MessageAnalysisRepository messageAnalysisRepository;
     private final MessageRepository messageRepository;
     private final IntentClassificationClient intentClassificationClient;
@@ -192,6 +197,59 @@ public class ChatRoomService {
         }
 
         analysis.markRecommendationAdopted();
+    }
+
+    @Transactional
+    public TeacherMessageSendData sendTeacherMessage(Long userId, Long chatRoomId, TeacherMessageSendRequest request) {
+        if (chatRoomId == null || chatRoomId <= 0) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "chatRoomId는 1 이상이어야 합니다.");
+        }
+        validateTeacherMessageSendRequest(request);
+
+        User teacher = getTeacherUser(userId);
+        ChatRoomUserMap senderMapping = getChatRoomParticipantMapping(chatRoomId, userId);
+        MessageAnalysis analysis = messageAnalysisRepository.findById(request.analysisId())
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "메시지 분석 결과를 찾을 수 없습니다."));
+
+        if (!analysis.getTeacher().getId().equals(teacher.getId())) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "본인의 메시지 분석 결과로만 메시지를 전송할 수 있습니다.");
+        }
+        if (!analysis.getChatRoom().getId().equals(chatRoomId)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "현재 채팅방에 속한 분석 결과로만 메시지를 전송할 수 있습니다.");
+        }
+        if (analysis.getUsedMessage() != null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "이미 사용된 분석 결과로는 다시 메시지를 전송할 수 없습니다.");
+        }
+
+        String finalContent = request.content().trim();
+        Message message = messageRepository.save(Message.createReviewed(
+                MESSAGE_TYPE_TEXT,
+                analysis.getOriginalContent(),
+                finalContent,
+                RISK_LEVEL_UNSAFE.equalsIgnoreCase(analysis.getRiskLevel()),
+                senderMapping.getChatRoom(),
+                teacher
+        ));
+
+        analysis.linkUsedMessage(message);
+
+        String recommendedMessage = analysis.getRecommendedMessage();
+        if (!isBlank(recommendedMessage)) {
+            boolean isRecommendationUsed = recommendedMessage.trim().equals(finalContent);
+            aiRecommendationRepository.save(AiRecommendation.create(
+                    message,
+                    recommendedMessage.trim(),
+                    isRecommendationUsed
+            ));
+        }
+
+        LocalDateTime now = LocalDateTime.now();
+        senderMapping.markAsRead(now);
+        chatRoomUserMapRepository.findAllByChatRoomId(chatRoomId).stream()
+                .filter(mapping -> !mapping.getUser().getId().equals(userId))
+                .forEach(ChatRoomUserMap::increaseUnreadCount);
+
+        return new TeacherMessageSendData(message.getId(), chatRoomId);
     }
 
     @Transactional
@@ -435,6 +493,18 @@ public class ChatRoomService {
         }
         if (request.score() < 1 || request.score() > 5) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "score는 1부터 5 사이여야 합니다.");
+        }
+    }
+
+    private void validateTeacherMessageSendRequest(TeacherMessageSendRequest request) {
+        if (request == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "요청 본문이 필요합니다.");
+        }
+        if (request.analysisId() == null || request.analysisId() <= 0) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "analysisId는 1 이상이어야 합니다.");
+        }
+        if (isBlank(request.content())) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "content는 필수입니다.");
         }
     }
 

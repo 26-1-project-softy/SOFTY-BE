@@ -116,6 +116,7 @@
 - PK: `id`
 - FK: `chat_room_id -> chat_room.id` (NOT NULL)
 - FK: `teacher_id -> users.id` (NOT NULL)
+- FK: `used_message_id -> message.id` (NULL)
 - 컬럼: `original_content`, `risk_level`, `recommended_message`, `is_recommendation_adopted`, `expires_at`
 
 ## 5. 관계 요약
@@ -134,6 +135,7 @@
 - `chat_room (1) - (N) message`
 - `chat_room (1) - (N) pdf_file`
 - `chat_room (1) - (N) message_analysis`
+- `message (1) - (N) message_analysis` (`used_message_id`)
 - `message (1) - (N) ai_recommendation`
 - `message_analysis (1) - (N) ai_feedback`
 - `users (1) - (N) message_analysis` (`teacher_id`)

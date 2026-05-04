@@ -181,11 +181,13 @@ CREATE TABLE message_analysis (
     risk_level VARCHAR(20) NOT NULL,
     recommended_message TEXT,
     is_recommendation_adopted BOOLEAN NOT NULL DEFAULT FALSE,
+    used_message_id BIGINT,
     expires_at TIMESTAMP,
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (chat_room_id) REFERENCES chat_room(id),
-    FOREIGN KEY (teacher_id) REFERENCES users(id)
+    FOREIGN KEY (teacher_id) REFERENCES users(id),
+    FOREIGN KEY (used_message_id) REFERENCES message(id)
 );
 
 -- 16. AI_FEEDBACK

@@ -11,6 +11,8 @@ import com.softy.be.chat.dto.InitMessageSendData;
 import com.softy.be.chat.dto.InitMessageSendRequest;
 import com.softy.be.chat.dto.TeacherMessageAnalyzeData;
 import com.softy.be.chat.dto.TeacherMessageAnalyzeRequest;
+import com.softy.be.chat.dto.TeacherMessageSendData;
+import com.softy.be.chat.dto.TeacherMessageSendRequest;
 import com.softy.be.chat.dto.TeacherWorkingHoursStatusData;
 import com.softy.be.chat.service.ChatRoomService;
 import com.softy.be.common.api.ApiResponse;
@@ -99,6 +101,28 @@ public class ChatRoomController {
         );
 
         return ResponseEntity.ok(response);
+    }
+
+    @PostMapping("/{chatRoomId}/messages/teacher")
+    @Operation(
+            summary = "교사 최종 메시지 전송",
+            description = "교사가 AI 분석 결과를 참고해 최종 메시지를 전송합니다."
+    )
+    public ResponseEntity<ApiResponse<TeacherMessageSendData>> sendTeacherMessage(
+            @AuthenticationPrincipal AuthenticatedUserPrincipal principal,
+            @PathVariable("chatRoomId") Long chatRoomId,
+            @RequestBody TeacherMessageSendRequest request
+    ) {
+        TeacherMessageSendData data = chatRoomService.sendTeacherMessage(principal.userId(), chatRoomId, request);
+
+        ApiResponse<TeacherMessageSendData> response = ApiResponse.of(
+                true,
+                201,
+                "메시지가 전송되었습니다.",
+                data
+        );
+
+        return ResponseEntity.status(201).body(response);
     }
 
     @PostMapping("/{chatRoomId}/read")

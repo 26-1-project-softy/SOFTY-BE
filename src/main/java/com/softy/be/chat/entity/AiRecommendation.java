@@ -32,5 +32,13 @@ public class AiRecommendation extends BaseEntity {
 
     @Column(name = "is_recommendation_used")
     private Boolean isRecommendationUsed;
+
+    public static AiRecommendation create(Message message, String content, boolean isRecommendationUsed) {
+        AiRecommendation recommendation = new AiRecommendation();
+        recommendation.message = message;
+        recommendation.content = content;
+        recommendation.isRecommendationUsed = isRecommendationUsed;
+        return recommendation;
+    }
 }
 
