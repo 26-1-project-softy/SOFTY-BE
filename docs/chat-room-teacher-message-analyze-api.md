@@ -1,6 +1,6 @@
 # 교사 메시지 분석 API
 
-- 엔드포인트: `POST /chat-rooms/{chatRoomId}/messages/analyze`
+- 엔드포인트: `POST /chat-rooms/{chatRoomId}/teacher-messages/analyze`
 - 목적: 교사가 전송 전 작성한 메시지를 AI가 분석하여 분쟁 가능성과 추천 문장을 반환한다.
 - 부수 동작:
   - 분석 결과를 `message_analysis` 테이블에 저장한다.
