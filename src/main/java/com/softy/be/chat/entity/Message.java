@@ -52,6 +52,24 @@ public class Message extends BaseEntity {
         return message;
     }
 
+    public static Message createReviewed(
+            String type,
+            String originalContent,
+            String modifiedContent,
+            boolean isDisputeRisk,
+            ChatRoom chatRoom,
+            User sender
+    ) {
+        Message message = new Message();
+        message.type = type;
+        message.content = originalContent;
+        message.modifyContent = modifiedContent;
+        message.isDisputeRisk = isDisputeRisk;
+        message.chatRoom = chatRoom;
+        message.sender = sender;
+        return message;
+    }
+
     public String resolveReportContent() {
         if (hasText(modifyContent)) {
             return modifyContent.trim();

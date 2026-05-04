@@ -156,29 +156,31 @@ CREATE TABLE pdf_file (
     FOREIGN KEY (chat_room_id) REFERENCES chat_room(id)
 );
 
--- 14. model_training_history
-CREATE TABLE model_training_history (
+-- 14. MESSAGE_ANALYSIS
+CREATE TABLE message_analysis (
     id BIGSERIAL PRIMARY KEY,
-    jobId VARCHAR,
-    evaluation_id VARCHAR,
-    trained_at TIMESTAMP NOT NULL,
-    model_version VARCHAR(50) NOT NULL,
-    dataset_version VARCHAR(50) NOT NULL,
-    f1_score DOUBLE PRECISION,
-    status VARCHAR(20) NOT NULL,
-    is_deployed BOOLEAN DEFAULT FALSE,
-    model_path TEXT,
+    chat_room_id BIGINT NOT NULL,
+    teacher_id BIGINT NOT NULL,
+    original_content TEXT NOT NULL,
+    risk_level VARCHAR(20) NOT NULL,
+    recommended_message TEXT,
+    is_recommendation_adopted BOOLEAN NOT NULL DEFAULT FALSE,
+    used_message_id BIGINT,
+    expires_at TIMESTAMP,
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (chat_room_id) REFERENCES chat_room(id),
+    FOREIGN KEY (teacher_id) REFERENCES users(id),
+    FOREIGN KEY (used_message_id) REFERENCES message(id)
 );
 
 -- 15. AI_FEEDBACK
 CREATE TABLE ai_feedback (
     id BIGSERIAL PRIMARY KEY,
-    message_id BIGINT NOT NULL,
+    message_analysis_id BIGINT NOT NULL,
     type VARCHAR(20) NOT NULL,
     actual_risk_score INT,
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (message_id) REFERENCES message(id)
+    FOREIGN KEY (message_analysis_id) REFERENCES message_analysis(id)
 );
