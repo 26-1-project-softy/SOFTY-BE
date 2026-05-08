@@ -7,6 +7,8 @@ import com.softy.be.chat.dto.ChatRoomMessageListData;
 import com.softy.be.chat.dto.ChatRoomMessageSendData;
 import com.softy.be.chat.dto.ChatRoomMessageSendRequest;
 import com.softy.be.chat.dto.ChatRoomReadData;
+import com.softy.be.chat.dto.ChatRoomStatusUpdateData;
+import com.softy.be.chat.dto.ChatRoomStatusUpdateRequest;
 import com.softy.be.chat.dto.InitMessageIntentData;
 import com.softy.be.chat.dto.InitMessageIntentRequest;
 import com.softy.be.chat.dto.InitMessageSendData;
@@ -24,6 +26,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -54,6 +57,28 @@ public class ChatRoomController {
                 true,
                 200,
                 "채팅방 상세 정보 조회에 성공했습니다.",
+                data
+        );
+
+        return ResponseEntity.ok(response);
+    }
+
+    @PatchMapping("/{chatRoomId}/status")
+    @Operation(
+            summary = "채팅방 상태 변경",
+            description = "교사가 참여 중인 채팅방의 처리 상태를 변경합니다."
+    )
+    public ResponseEntity<ApiResponse<ChatRoomStatusUpdateData>> updateChatRoomStatus(
+            @AuthenticationPrincipal AuthenticatedUserPrincipal principal,
+            @PathVariable("chatRoomId") Long chatRoomId,
+            @RequestBody ChatRoomStatusUpdateRequest request
+    ) {
+        ChatRoomStatusUpdateData data = chatRoomService.updateChatRoomStatus(principal.userId(), chatRoomId, request);
+
+        ApiResponse<ChatRoomStatusUpdateData> response = ApiResponse.of(
+                true,
+                200,
+                "채팅방 상태가 변경되었습니다.",
                 data
         );
 

@@ -3,6 +3,7 @@ package com.softy.be.admin.controller;
 import com.softy.be.admin.dto.AdminPdfStatisticsData;
 import com.softy.be.admin.dto.AdminRecommendationAdoptionData;
 import com.softy.be.admin.dto.AdminRiskStatisticsData;
+import com.softy.be.admin.dto.AdminTokenUsageData;
 import com.softy.be.admin.service.AdminStatisticsService;
 import com.softy.be.common.api.ApiResponse;
 import io.swagger.v3.oas.annotations.Operation;
@@ -67,6 +68,23 @@ public class AdminStatisticsController {
                 true,
                 200,
                 "채택률 조회에 성공했습니다.",
+                data
+        );
+        return ResponseEntity.ok(response);
+    }
+
+    @GetMapping("/token-usage")
+    @Operation(
+            summary = "LLM 토큰 사용량 조회",
+            description = "AI 서버의 엔드포인트별 토큰 사용량 집계 결과를 조회합니다."
+    )
+    public ResponseEntity<ApiResponse<AdminTokenUsageData>> getTokenUsage() {
+        AdminTokenUsageData data = adminStatisticsService.getTokenUsage();
+
+        ApiResponse<AdminTokenUsageData> response = ApiResponse.of(
+                true,
+                200,
+                "토큰 사용량 조회에 성공했습니다.",
                 data
         );
         return ResponseEntity.ok(response);
