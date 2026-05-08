@@ -6,7 +6,7 @@ public record AdminRiskFeedbackItemData(
         Long feedbackId,
         String teacherName,
         Integer feedbackResult,
-        String aiRecommendMessage,
+        String originalMessage,
         LocalDateTime createdAt
 ) {
 }

@@ -10,7 +10,7 @@ public interface AiFeedbackListRow {
 
     Integer getFeedbackResult();
 
-    String getAiRecommendMessage();
+    String getOriginalMessage();
 
     LocalDateTime getCreatedAt();
 }
