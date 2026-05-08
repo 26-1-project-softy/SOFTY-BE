@@ -8,6 +8,9 @@ import com.softy.be.admin.dto.AdminRecommendationAdoptionData;
 import com.softy.be.admin.dto.AdminRiskFeedbackItemData;
 import com.softy.be.admin.dto.AdminRiskFeedbackListData;
 import com.softy.be.admin.dto.AdminRiskStatisticsData;
+import com.softy.be.admin.dto.AdminTokenUsageData;
+import com.softy.be.admin.dto.AdminTokenUsageDetailData;
+import com.softy.be.admin.dto.AdminTokenUsageSummaryData;
 import com.softy.be.admin.dto.AdminTeacherPdfCountData;
 import com.softy.be.chat.repository.AiFeedbackListRow;
 import com.softy.be.chat.repository.AiFeedbackRepository;
@@ -32,6 +35,7 @@ public class AdminStatisticsService {
     private final AiFeedbackRepository aiFeedbackRepository;
     private final AiRecommendationRepository aiRecommendationRepository;
     private final AiEvaluationClient aiEvaluationClient;
+    private final AiTokenUsageClient aiTokenUsageClient;
 
     @Transactional(readOnly = true)
     public AdminPdfStatisticsData getPdfStatistics() {
@@ -127,6 +131,27 @@ public class AdminStatisticsService {
                 nullToEmpty(result.contentType()),
                 version,
                 datasetVersion
+        );
+    }
+
+    @Transactional(readOnly = true)
+    public AdminTokenUsageData getTokenUsage() {
+        AiTokenUsageClient.AiTokenUsageResult result = aiTokenUsageClient.getTokenUsage();
+
+        return new AdminTokenUsageData(
+                new AdminTokenUsageSummaryData(
+                        result.totalUsage().inputTokens(),
+                        result.totalUsage().outputTokens(),
+                        result.totalUsage().totalTokens()
+                ),
+                result.details().stream()
+                        .map(detail -> new AdminTokenUsageDetailData(
+                                nullToEmpty(detail.endpoint()),
+                                detail.inputTokens(),
+                                detail.outputTokens(),
+                                detail.totalTokens()
+                        ))
+                        .toList()
         );
     }
 

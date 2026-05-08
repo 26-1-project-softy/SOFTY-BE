@@ -8,6 +8,8 @@ import com.softy.be.chat.dto.ChatRoomMessageListData;
 import com.softy.be.chat.dto.ChatRoomMessageSendData;
 import com.softy.be.chat.dto.ChatRoomMessageSendRequest;
 import com.softy.be.chat.dto.ChatRoomReadData;
+import com.softy.be.chat.dto.ChatRoomStatusUpdateData;
+import com.softy.be.chat.dto.ChatRoomStatusUpdateRequest;
 import com.softy.be.chat.dto.InitMessageIntentData;
 import com.softy.be.chat.dto.InitMessageIntentRequest;
 import com.softy.be.chat.dto.InitMessageSendData;
@@ -115,6 +117,21 @@ public class ChatRoomService {
                 nullToEmpty(row.getIntentLabel()),
                 nullToEmpty(row.getStatus())
         );
+    }
+
+    @Transactional
+    public ChatRoomStatusUpdateData updateChatRoomStatus(Long userId, Long chatRoomId, ChatRoomStatusUpdateRequest request) {
+        if (chatRoomId == null || chatRoomId <= 0) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "chatRoomId는 1 이상이어야 합니다.");
+        }
+        validateChatRoomStatusUpdateRequest(request);
+
+        getTeacherUser(userId);
+        ChatRoomUserMap mapping = getChatRoomParticipantMapping(chatRoomId, userId);
+        ChatRoom chatRoom = mapping.getChatRoom();
+        chatRoom.updateStatus(request.status());
+
+        return new ChatRoomStatusUpdateData(chatRoom.getId(), chatRoom.getStatus().name());
     }
 
     @Transactional
@@ -527,6 +544,15 @@ public class ChatRoomService {
         }
         if (isBlank(request.content())) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "content는 필수입니다.");
+        }
+    }
+
+    private void validateChatRoomStatusUpdateRequest(ChatRoomStatusUpdateRequest request) {
+        if (request == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "요청 본문이 필요합니다.");
+        }
+        if (request.status() == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "status는 필수입니다.");
         }
     }
 

@@ -30,4 +30,8 @@ public class ChatRoom extends BaseEntity {
         chatRoom.status = status;
         return chatRoom;
     }
+
+    public void updateStatus(ChatRoomStatus status) {
+        this.status = status;
+    }
 }
