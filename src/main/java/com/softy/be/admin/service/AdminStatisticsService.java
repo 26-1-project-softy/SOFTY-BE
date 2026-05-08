@@ -179,7 +179,7 @@ public class AdminStatisticsService {
                 row.getFeedbackId(),
                 row.getTeacherName(),
                 row.getFeedbackResult(),
-                row.getAiRecommendMessage(),
+                row.getOriginalMessage(),
                 row.getCreatedAt()
         );
     }
