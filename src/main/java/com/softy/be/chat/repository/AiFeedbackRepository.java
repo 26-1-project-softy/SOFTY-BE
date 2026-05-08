@@ -17,7 +17,7 @@ public interface AiFeedbackRepository extends JpaRepository<AiFeedback, Long> {
                 f.id AS feedbackId,
                 t.name AS teacherName,
                 f.actualRiskScore AS feedbackResult,
-                m.recommendedMessage AS aiRecommendMessage,
+                m.originalContent AS originalMessage,
                 f.createdAt AS createdAt
             FROM AiFeedback f
             JOIN f.messageAnalysis m
