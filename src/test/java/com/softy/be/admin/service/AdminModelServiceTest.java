@@ -25,6 +25,9 @@ class AdminModelServiceTest {
     @Mock
     private AiTrainingHistoryClient aiTrainingHistoryClient;
 
+    @Mock
+    private AiRetrainingJobClient aiRetrainingJobClient;
+
     @InjectMocks
     private AdminModelService adminModelService;
 
@@ -86,5 +89,17 @@ class AdminModelServiceTest {
                         .isEqualTo(HttpStatus.BAD_REQUEST));
 
         verifyNoInteractions(aiTrainingHistoryClient);
+    }
+
+    @Test
+    void requestRiskDetectionRetrainingReturnsJobIdAndNormalizedStatus() {
+        when(aiRetrainingJobClient.requestRiskDetectionRetraining()).thenReturn(
+                new AiRetrainingJobClient.AiRetrainingJobResult("retrain_20260326_001", "queued")
+        );
+
+        var result = adminModelService.requestRiskDetectionRetraining();
+
+        assertThat(result.jobId()).isEqualTo("retrain_20260326_001");
+        assertThat(result.status()).isEqualTo("QUEUED");
     }
 }

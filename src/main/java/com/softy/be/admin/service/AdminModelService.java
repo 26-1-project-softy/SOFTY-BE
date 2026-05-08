@@ -1,6 +1,7 @@
 package com.softy.be.admin.service;
 
 import com.softy.be.admin.dto.AdminLatestModelData;
+import com.softy.be.admin.dto.AdminRetrainingJobData;
 import com.softy.be.admin.dto.AdminTrainingJobHistoryData;
 import com.softy.be.admin.dto.AdminTrainingJobHistoryItemData;
 import lombok.RequiredArgsConstructor;
@@ -19,6 +20,7 @@ public class AdminModelService {
 
     private final AiTrainingJobClient aiTrainingJobClient;
     private final AiTrainingHistoryClient aiTrainingHistoryClient;
+    private final AiRetrainingJobClient aiRetrainingJobClient;
 
     @Transactional(readOnly = true)
     public AdminLatestModelData getLatestModel() {
@@ -61,6 +63,16 @@ public class AdminModelService {
                 result.size(),
                 result.totalCount(),
                 result.totalPages()
+        );
+    }
+
+    @Transactional(readOnly = true)
+    public AdminRetrainingJobData requestRiskDetectionRetraining() {
+        AiRetrainingJobClient.AiRetrainingJobResult result = aiRetrainingJobClient.requestRiskDetectionRetraining();
+
+        return new AdminRetrainingJobData(
+                nullToEmpty(result.jobId()),
+                normalizeStatus(result.status())
         );
     }
 
