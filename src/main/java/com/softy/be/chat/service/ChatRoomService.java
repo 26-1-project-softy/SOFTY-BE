@@ -362,6 +362,12 @@ public class ChatRoomService {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "해당 채팅방에 접근할 권한이 없습니다.");
         }
 
+        LocalDateTime counterpartLastReadAt = chatRoomUserMapRepository.findAllByChatRoomId(chatRoomId).stream()
+                .filter(mapping -> !mapping.getUser().getId().equals(userId))
+                .map(ChatRoomUserMap::getLastReadAt)
+                .findFirst()
+                .orElse(null);
+
         List<Message> descendingMessages = messageRepository.findPreviewMessages(
                 chatRoomId,
                 cursor,
@@ -369,14 +375,17 @@ public class ChatRoomService {
         );
 
         List<ChatRoomMessageItemData> messages = new ArrayList<>(descendingMessages.size());
+        Long latestUnreadMessageId = findLatestUnreadMessageId(descendingMessages, userId, counterpartLastReadAt);
         for (Message message : descendingMessages) {
+            boolean isMine = message.getSender().getId().equals(userId);
             messages.add(new ChatRoomMessageItemData(
                     message.getId(),
-                    message.getSender().getId().equals(userId),
+                    isMine,
                     nullToEmpty(message.getSender().getName()),
                     nullToEmpty(message.getSender().getRole()),
                     message.resolveReportContent(),
-                    message.getCreatedAt()
+                    message.getCreatedAt(),
+                    isMine && message.getId().equals(latestUnreadMessageId)
             ));
         }
         Collections.reverse(messages);
@@ -614,6 +623,18 @@ public class ChatRoomService {
 
     private boolean isBlank(String value) {
         return value == null || value.trim().isEmpty();
+    }
+
+    private Long findLatestUnreadMessageId(List<Message> descendingMessages, Long userId, LocalDateTime counterpartLastReadAt) {
+        for (Message message : descendingMessages) {
+            if (!message.getSender().getId().equals(userId)) {
+                continue;
+            }
+            if (counterpartLastReadAt == null || message.getCreatedAt().isAfter(counterpartLastReadAt)) {
+                return message.getId();
+            }
+        }
+        return null;
     }
 
     private ChatRoomListItemData toChatRoomListItemData(ChatRoomListRow row) {
