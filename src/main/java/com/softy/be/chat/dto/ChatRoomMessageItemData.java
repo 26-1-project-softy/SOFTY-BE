@@ -8,6 +8,7 @@ public record ChatRoomMessageItemData(
         String senderName,
         String senderRole,
         String content,
-        LocalDateTime createdAt
+        LocalDateTime createdAt,
+        boolean isUnreadByCounterpart
 ) {
 }
