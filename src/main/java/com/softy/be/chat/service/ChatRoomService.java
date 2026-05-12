@@ -364,8 +364,8 @@ public class ChatRoomService {
 
         LocalDateTime counterpartLastReadAt = chatRoomUserMapRepository.findAllByChatRoomId(chatRoomId).stream()
                 .filter(mapping -> !mapping.getUser().getId().equals(userId))
-                .map(ChatRoomUserMap::getLastReadAt)
                 .findFirst()
+                .map(ChatRoomUserMap::getLastReadAt)
                 .orElse(null);
 
         List<Message> descendingMessages = messageRepository.findPreviewMessages(
