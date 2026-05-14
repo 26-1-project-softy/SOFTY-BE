@@ -143,7 +143,7 @@ public class ChatRoomService {
 
         User teacher = getTeacherUser(userId);
         ChatRoomUserMap mapping = getChatRoomParticipantMapping(chatRoomId, userId);
-        return analyzeTeacherMessageContent(teacher, mapping.getChatRoom(), request.content().trim());
+        return analyzeTeacherMessageContent(teacher, mapping.getChatRoom(), request.content());
     }
 
     @Transactional
@@ -161,7 +161,7 @@ public class ChatRoomService {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "본인의 메시지 분석 결과만 재분석할 수 있습니다.");
         }
 
-        return analyzeTeacherMessageContent(teacher, baseAnalysis.getChatRoom(), request.content().trim());
+        return analyzeTeacherMessageContent(teacher, baseAnalysis.getChatRoom(), request.content());
     }
 
     @Transactional
@@ -228,7 +228,7 @@ public class ChatRoomService {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "이미 사용된 분석 결과로는 다시 메시지를 전송할 수 없습니다.");
         }
 
-        String finalContent = request.content().trim();
+        String finalContent = request.content();
         Message message = messageRepository.save(Message.createReviewed(
                 MESSAGE_TYPE_TEXT,
                 analysis.getOriginalContent(),
@@ -242,10 +242,10 @@ public class ChatRoomService {
 
         String recommendedMessage = analysis.getRecommendedMessage();
         if (!isBlank(recommendedMessage)) {
-            boolean isRecommendationUsed = recommendedMessage.trim().equals(finalContent);
+            boolean isRecommendationUsed = recommendedMessage.trim().equals(finalContent.trim());
             aiRecommendationRepository.save(AiRecommendation.create(
                     message,
-                    recommendedMessage.trim(),
+                    recommendedMessage,
                     isRecommendationUsed
             ));
         }
@@ -293,7 +293,7 @@ public class ChatRoomService {
 
         Message message = messageRepository.save(Message.create(
                 MESSAGE_TYPE_TEXT,
-                request.content().trim(),
+                request.content(),
                 senderMapping.getChatRoom(),
                 user
         ));
@@ -375,7 +375,6 @@ public class ChatRoomService {
         );
 
         List<ChatRoomMessageItemData> messages = new ArrayList<>(descendingMessages.size());
-        Long latestUnreadMessageId = findLatestUnreadMessageId(descendingMessages, userId, counterpartLastReadAt);
         for (Message message : descendingMessages) {
             boolean isMine = message.getSender().getId().equals(userId);
             messages.add(new ChatRoomMessageItemData(
@@ -385,7 +384,7 @@ public class ChatRoomService {
                     nullToEmpty(message.getSender().getRole()),
                     message.resolveReportContent(),
                     message.getCreatedAt(),
-                    isMine && message.getId().equals(latestUnreadMessageId)
+                    isUnreadByCounterpart(message, userId, counterpartLastReadAt)
             ));
         }
         Collections.reverse(messages);
@@ -442,7 +441,7 @@ public class ChatRoomService {
         validateIntentRequest(request);
         resolveParentTeacherLink(userId);
 
-        String intentLabel = intentClassificationClient.classifyIntent(request.content().trim());
+        String intentLabel = intentClassificationClient.classifyIntent(request.content());
         return new InitMessageIntentData(intentLabel);
     }
 
@@ -471,7 +470,7 @@ public class ChatRoomService {
 
         Message message = messageRepository.save(Message.create(
                 MESSAGE_TYPE_TEXT,
-                request.content().trim(),
+                request.content(),
                 chatRoom,
                 parent
         ));
@@ -521,17 +520,11 @@ public class ChatRoomService {
         if (request == null) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "요청 본문이 필요합니다.");
         }
-        if (isBlank(request.content())) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "content는 필수입니다.");
-        }
     }
 
     private void validateSendRequest(InitMessageSendRequest request) {
         if (request == null) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "요청 본문이 필요합니다.");
-        }
-        if (isBlank(request.content())) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "content는 필수입니다.");
         }
         if (isBlank(request.intentLabel())) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "intentLabel은 필수입니다.");
@@ -542,17 +535,11 @@ public class ChatRoomService {
         if (request == null) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "요청 본문이 필요합니다.");
         }
-        if (isBlank(request.content())) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "content는 필수입니다.");
-        }
     }
 
     private void validateChatRoomMessageSendRequest(ChatRoomMessageSendRequest request) {
         if (request == null) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "요청 본문이 필요합니다.");
-        }
-        if (isBlank(request.content())) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "content는 필수입니다.");
         }
     }
 
@@ -583,9 +570,6 @@ public class ChatRoomService {
         }
         if (request.analysisId() == null || request.analysisId() <= 0) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "analysisId는 1 이상이어야 합니다.");
-        }
-        if (isBlank(request.content())) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "content는 필수입니다.");
         }
     }
 
@@ -625,16 +609,11 @@ public class ChatRoomService {
         return value == null || value.trim().isEmpty();
     }
 
-    private Long findLatestUnreadMessageId(List<Message> descendingMessages, Long userId, LocalDateTime counterpartLastReadAt) {
-        for (Message message : descendingMessages) {
-            if (!message.getSender().getId().equals(userId)) {
-                continue;
-            }
-            if (counterpartLastReadAt == null || message.getCreatedAt().isAfter(counterpartLastReadAt)) {
-                return message.getId();
-            }
+    private boolean isUnreadByCounterpart(Message message, Long userId, LocalDateTime counterpartLastReadAt) {
+        if (!message.getSender().getId().equals(userId)) {
+            return false;
         }
-        return null;
+        return counterpartLastReadAt == null || message.getCreatedAt().isAfter(counterpartLastReadAt);
     }
 
     private ChatRoomListItemData toChatRoomListItemData(ChatRoomListRow row) {
