@@ -375,7 +375,6 @@ public class ChatRoomService {
         );
 
         List<ChatRoomMessageItemData> messages = new ArrayList<>(descendingMessages.size());
-        Long latestUnreadMessageId = findLatestUnreadMessageId(descendingMessages, userId, counterpartLastReadAt);
         for (Message message : descendingMessages) {
             boolean isMine = message.getSender().getId().equals(userId);
             messages.add(new ChatRoomMessageItemData(
@@ -385,7 +384,7 @@ public class ChatRoomService {
                     nullToEmpty(message.getSender().getRole()),
                     message.resolveReportContent(),
                     message.getCreatedAt(),
-                    isMine && message.getId().equals(latestUnreadMessageId)
+                    isUnreadByCounterpart(message, userId, counterpartLastReadAt)
             ));
         }
         Collections.reverse(messages);
@@ -610,16 +609,11 @@ public class ChatRoomService {
         return value == null || value.trim().isEmpty();
     }
 
-    private Long findLatestUnreadMessageId(List<Message> descendingMessages, Long userId, LocalDateTime counterpartLastReadAt) {
-        for (Message message : descendingMessages) {
-            if (!message.getSender().getId().equals(userId)) {
-                continue;
-            }
-            if (counterpartLastReadAt == null || message.getCreatedAt().isAfter(counterpartLastReadAt)) {
-                return message.getId();
-            }
+    private boolean isUnreadByCounterpart(Message message, Long userId, LocalDateTime counterpartLastReadAt) {
+        if (!message.getSender().getId().equals(userId)) {
+            return false;
         }
-        return null;
+        return counterpartLastReadAt == null || message.getCreatedAt().isAfter(counterpartLastReadAt);
     }
 
     private ChatRoomListItemData toChatRoomListItemData(ChatRoomListRow row) {

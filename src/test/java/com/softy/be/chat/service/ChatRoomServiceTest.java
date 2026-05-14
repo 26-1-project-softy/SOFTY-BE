@@ -151,7 +151,7 @@ class ChatRoomServiceTest {
     }
 
     @Test
-    void getChatRoomMessagesMarksOnlyLatestUnreadMineMessage() {
+    void getChatRoomMessagesMarksAllUnreadMineMessages() {
         User teacher = User.createForKakao("teacher");
         teacher.completeTeacherSignup("teacher");
         ReflectionTestUtils.setField(teacher, "id", 1L);
@@ -193,7 +193,7 @@ class ChatRoomServiceTest {
         assertThat(result.messages().get(0).messageId()).isEqualTo(101L);
         assertThat(result.messages().get(0).isUnreadByCounterpart()).isFalse();
         assertThat(result.messages().get(1).messageId()).isEqualTo(102L);
-        assertThat(result.messages().get(1).isUnreadByCounterpart()).isFalse();
+        assertThat(result.messages().get(1).isUnreadByCounterpart()).isTrue();
         assertThat(result.messages().get(2).messageId()).isEqualTo(103L);
         assertThat(result.messages().get(2).isUnreadByCounterpart()).isTrue();
     }
