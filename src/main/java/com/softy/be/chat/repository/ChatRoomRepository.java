@@ -114,8 +114,8 @@ public interface ChatRoomRepository extends JpaRepository<ChatRoom, Long> {
                             SELECT
                                 m.chat_room_id,
                                 CASE
-                                    WHEN m.modify_content IS NOT NULL AND BTRIM(m.modify_content) <> '' THEN BTRIM(m.modify_content)
-                                    WHEN m.content IS NOT NULL THEN BTRIM(m.content)
+                                    WHEN m.modify_content IS NOT NULL THEN m.modify_content
+                                    WHEN m.content IS NOT NULL THEN m.content
                                     ELSE ''
                                 END AS last_message,
                                 m.created_at,
@@ -209,8 +209,8 @@ public interface ChatRoomRepository extends JpaRepository<ChatRoom, Long> {
                             SELECT
                                 m.chat_room_id,
                                 CASE
-                                    WHEN m.modify_content IS NOT NULL AND BTRIM(m.modify_content) <> '' THEN BTRIM(m.modify_content)
-                                    WHEN m.content IS NOT NULL THEN BTRIM(m.content)
+                                    WHEN m.modify_content IS NOT NULL THEN m.modify_content
+                                    WHEN m.content IS NOT NULL THEN m.content
                                     ELSE ''
                                 END AS last_message,
                                 m.created_at,
