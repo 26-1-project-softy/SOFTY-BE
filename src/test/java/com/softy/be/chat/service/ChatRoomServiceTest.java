@@ -9,6 +9,7 @@ import com.softy.be.chat.dto.TeacherMessageSendRequest;
 import com.softy.be.chat.entity.ChatRoom;
 import com.softy.be.chat.entity.ChatRoomStatus;
 import com.softy.be.chat.entity.ChatRoomUserMap;
+import com.softy.be.chat.entity.AiRecommendation;
 import com.softy.be.chat.entity.Message;
 import com.softy.be.chat.entity.MessageAnalysis;
 import com.softy.be.chat.repository.AiFeedbackRepository;
@@ -26,6 +27,7 @@ import com.softy.be.user.entity.User;
 import com.softy.be.user.repository.UserRepository;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -323,6 +325,44 @@ class ChatRoomServiceTest {
 
         assertThat(analysis.getUsedMessage()).isNotNull();
         assertThat(analysis.getUsedMessage().getModifyContent()).isEqualTo(rawContent);
+    }
+
+    @Test
+    void sendTeacherMessageTreatsTrimmedMatchAsRecommendationUsed() {
+        User teacher = User.createForKakao("teacher");
+        teacher.completeTeacherSignup("teacher");
+        ReflectionTestUtils.setField(teacher, "id", 1L);
+
+        ChatRoom chatRoom = ChatRoom.create("CONSULT", ChatRoomStatus.IN_PROGRESS);
+        ReflectionTestUtils.setField(chatRoom, "id", 15L);
+
+        ChatRoomUserMap teacherMapping = ChatRoomUserMap.create(chatRoom, teacher, 0, null);
+
+        MessageAnalysis analysis = MessageAnalysis.create(
+                chatRoom,
+                teacher,
+                "draft",
+                "UNSAFE",
+                "recommendation",
+                LocalDateTime.of(2026, 5, 14, 10, 0)
+        );
+        ReflectionTestUtils.setField(analysis, "id", 31L);
+
+        when(userRepository.findById(1L)).thenReturn(Optional.of(teacher));
+        when(chatRoomRepository.findById(15L)).thenReturn(Optional.of(chatRoom));
+        when(chatRoomUserMapRepository.findByChatRoomIdAndUserId(15L, 1L)).thenReturn(Optional.of(teacherMapping));
+        when(chatRoomUserMapRepository.findAllByChatRoomId(15L)).thenReturn(List.of(teacherMapping));
+        when(messageAnalysisRepository.findById(31L)).thenReturn(Optional.of(analysis));
+        when(messageRepository.save(any(Message.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(aiRecommendationRepository.save(any(AiRecommendation.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        chatRoomService.sendTeacherMessage(1L, 15L, new TeacherMessageSendRequest(31L, "  recommendation  "));
+
+        ArgumentCaptor<AiRecommendation> recommendationCaptor = ArgumentCaptor.forClass(AiRecommendation.class);
+        verify(aiRecommendationRepository).save(recommendationCaptor.capture());
+        AiRecommendation savedRecommendation = recommendationCaptor.getValue();
+        assertThat(ReflectionTestUtils.getField(savedRecommendation, "content")).isEqualTo("recommendation");
+        assertThat(ReflectionTestUtils.getField(savedRecommendation, "isRecommendationUsed")).isEqualTo(true);
     }
 
     @Test

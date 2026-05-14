@@ -242,10 +242,10 @@ public class ChatRoomService {
 
         String recommendedMessage = analysis.getRecommendedMessage();
         if (!isBlank(recommendedMessage)) {
-            boolean isRecommendationUsed = recommendedMessage.trim().equals(finalContent);
+            boolean isRecommendationUsed = recommendedMessage.trim().equals(finalContent.trim());
             aiRecommendationRepository.save(AiRecommendation.create(
                     message,
-                    recommendedMessage.trim(),
+                    recommendedMessage,
                     isRecommendationUsed
             ));
         }
