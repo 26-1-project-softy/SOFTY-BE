@@ -1,18 +1,25 @@
 package com.softy.be.chat.service;
 
 import com.softy.be.chat.dto.ChatRoomMessageListData;
+import com.softy.be.chat.dto.ChatRoomMessageSendRequest;
 import com.softy.be.chat.dto.ChatRoomStatusUpdateData;
 import com.softy.be.chat.dto.ChatRoomStatusUpdateRequest;
+import com.softy.be.chat.dto.InitMessageIntentRequest;
+import com.softy.be.chat.dto.TeacherMessageSendRequest;
 import com.softy.be.chat.entity.ChatRoom;
 import com.softy.be.chat.entity.ChatRoomStatus;
 import com.softy.be.chat.entity.ChatRoomUserMap;
 import com.softy.be.chat.entity.Message;
+import com.softy.be.chat.entity.MessageAnalysis;
 import com.softy.be.chat.repository.AiFeedbackRepository;
 import com.softy.be.chat.repository.AiRecommendationRepository;
 import com.softy.be.chat.repository.ChatRoomRepository;
 import com.softy.be.chat.repository.ChatRoomUserMapRepository;
 import com.softy.be.chat.repository.MessageAnalysisRepository;
 import com.softy.be.chat.repository.MessageRepository;
+import com.softy.be.school.entity.Classroom;
+import com.softy.be.school.entity.ParentStudent;
+import com.softy.be.school.entity.Student;
 import com.softy.be.school.repository.ParentStudentRepository;
 import com.softy.be.school.repository.TeacherSettingRepository;
 import com.softy.be.user.entity.User;
@@ -26,6 +33,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
@@ -226,5 +234,156 @@ class ChatRoomServiceTest {
         assertThat(result.messages()).hasSize(2);
         assertThat(result.messages())
                 .allSatisfy(message -> assertThat(message.isUnreadByCounterpart()).isFalse());
+    }
+
+    @Test
+    void sendChatRoomMessagePreservesLeadingAndTrailingWhitespace() {
+        User parent = User.createForKakao("parent");
+        parent.completeParentSignup("parent");
+        ReflectionTestUtils.setField(parent, "id", 2L);
+
+        User teacher = User.createForKakao("teacher");
+        teacher.completeTeacherSignup("teacher");
+        ReflectionTestUtils.setField(teacher, "id", 1L);
+
+        ChatRoom chatRoom = ChatRoom.create("CONSULT", ChatRoomStatus.IN_PROGRESS);
+        ReflectionTestUtils.setField(chatRoom, "id", 15L);
+
+        ChatRoomUserMap parentMapping = ChatRoomUserMap.create(chatRoom, parent, 0, null);
+        ChatRoomUserMap teacherMapping = ChatRoomUserMap.create(chatRoom, teacher, 0, null);
+
+        when(userRepository.findById(2L)).thenReturn(Optional.of(parent));
+        when(chatRoomRepository.findById(15L)).thenReturn(Optional.of(chatRoom));
+        when(chatRoomUserMapRepository.findAllByChatRoomId(15L)).thenReturn(List.of(parentMapping, teacherMapping));
+        when(messageRepository.save(any(Message.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        String rawContent = "  hello teacher  ";
+        var result = chatRoomService.sendChatRoomMessage(2L, 15L, new ChatRoomMessageSendRequest(rawContent));
+
+        assertThat(result.content()).isEqualTo(rawContent);
+    }
+
+    @Test
+    void sendChatRoomMessageAllowsWhitespaceOnlyContent() {
+        User parent = User.createForKakao("parent");
+        parent.completeParentSignup("parent");
+        ReflectionTestUtils.setField(parent, "id", 2L);
+
+        User teacher = User.createForKakao("teacher");
+        teacher.completeTeacherSignup("teacher");
+        ReflectionTestUtils.setField(teacher, "id", 1L);
+
+        ChatRoom chatRoom = ChatRoom.create("CONSULT", ChatRoomStatus.IN_PROGRESS);
+        ReflectionTestUtils.setField(chatRoom, "id", 15L);
+
+        ChatRoomUserMap parentMapping = ChatRoomUserMap.create(chatRoom, parent, 0, null);
+        ChatRoomUserMap teacherMapping = ChatRoomUserMap.create(chatRoom, teacher, 0, null);
+
+        when(userRepository.findById(2L)).thenReturn(Optional.of(parent));
+        when(chatRoomRepository.findById(15L)).thenReturn(Optional.of(chatRoom));
+        when(chatRoomUserMapRepository.findAllByChatRoomId(15L)).thenReturn(List.of(parentMapping, teacherMapping));
+        when(messageRepository.save(any(Message.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        String rawContent = "   ";
+        var result = chatRoomService.sendChatRoomMessage(2L, 15L, new ChatRoomMessageSendRequest(rawContent));
+
+        assertThat(result.content()).isEqualTo(rawContent);
+    }
+
+    @Test
+    void sendTeacherMessagePreservesLeadingAndTrailingWhitespace() {
+        User teacher = User.createForKakao("teacher");
+        teacher.completeTeacherSignup("teacher");
+        ReflectionTestUtils.setField(teacher, "id", 1L);
+
+        ChatRoom chatRoom = ChatRoom.create("CONSULT", ChatRoomStatus.IN_PROGRESS);
+        ReflectionTestUtils.setField(chatRoom, "id", 15L);
+
+        ChatRoomUserMap teacherMapping = ChatRoomUserMap.create(chatRoom, teacher, 0, null);
+
+        MessageAnalysis analysis = MessageAnalysis.create(
+                chatRoom,
+                teacher,
+                "  original draft  ",
+                "SAFE",
+                null,
+                LocalDateTime.of(2026, 5, 14, 10, 0)
+        );
+        ReflectionTestUtils.setField(analysis, "id", 30L);
+
+        when(userRepository.findById(1L)).thenReturn(Optional.of(teacher));
+        when(chatRoomRepository.findById(15L)).thenReturn(Optional.of(chatRoom));
+        when(chatRoomUserMapRepository.findByChatRoomIdAndUserId(15L, 1L)).thenReturn(Optional.of(teacherMapping));
+        when(chatRoomUserMapRepository.findAllByChatRoomId(15L)).thenReturn(List.of(teacherMapping));
+        when(messageAnalysisRepository.findById(30L)).thenReturn(Optional.of(analysis));
+        when(messageRepository.save(any(Message.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        String rawContent = "  final teacher message  ";
+        chatRoomService.sendTeacherMessage(1L, 15L, new TeacherMessageSendRequest(30L, rawContent));
+
+        assertThat(analysis.getUsedMessage()).isNotNull();
+        assertThat(analysis.getUsedMessage().getModifyContent()).isEqualTo(rawContent);
+    }
+
+    @Test
+    void analyzeInitMessageIntentPreservesLeadingAndTrailingWhitespace() {
+        User parent = User.createForKakao("parent");
+        parent.completeParentSignup("parent");
+        ReflectionTestUtils.setField(parent, "id", 2L);
+
+        User teacher = User.createForKakao("teacher");
+        teacher.completeTeacherSignup("teacher");
+        ReflectionTestUtils.setField(teacher, "id", 1L);
+
+        Classroom classroom = Classroom.create(1, 1, null, teacher);
+        Student student = Student.create("student", LocalDate.of(2020, 1, 1), "M", classroom);
+        ParentStudent parentStudent = ParentStudent.create(parent, student);
+
+        when(userRepository.findById(2L)).thenReturn(Optional.of(parent));
+        when(parentStudentRepository.findFirstByParentIdOrderByIdDesc(2L)).thenReturn(Optional.of(parentStudent));
+        when(intentClassificationClient.classifyIntent("  need help  ")).thenReturn("CONSULT");
+
+        var result = chatRoomService.analyzeInitMessageIntent(2L, new InitMessageIntentRequest("  need help  "));
+
+        assertThat(result.intentLabel()).isEqualTo("CONSULT");
+    }
+
+    @Test
+    void getChatRoomMessagesPreservesWhitespaceInDisplayedContent() {
+        User teacher = User.createForKakao("teacher");
+        teacher.completeTeacherSignup("teacher");
+        ReflectionTestUtils.setField(teacher, "id", 1L);
+        ReflectionTestUtils.setField(teacher, "name", "Teacher");
+
+        User parent = User.createForKakao("parent");
+        parent.completeParentSignup("parent");
+        ReflectionTestUtils.setField(parent, "id", 2L);
+        ReflectionTestUtils.setField(parent, "name", "Parent");
+
+        ChatRoom chatRoom = ChatRoom.create("CONSULT", ChatRoomStatus.IN_PROGRESS);
+        ReflectionTestUtils.setField(chatRoom, "id", 15L);
+
+        ChatRoomUserMap teacherMapping = ChatRoomUserMap.create(chatRoom, teacher, 0, LocalDateTime.of(2026, 5, 12, 9, 0));
+        ChatRoomUserMap parentMapping = ChatRoomUserMap.create(chatRoom, parent, 0, LocalDateTime.of(2026, 5, 12, 10, 5));
+
+        Message teacherMessage = Message.createReviewed("TEXT", "original", "  reviewed message  ", false, chatRoom, teacher);
+        ReflectionTestUtils.setField(teacherMessage, "id", 102L);
+        ReflectionTestUtils.setField(teacherMessage, "createdAt", LocalDateTime.of(2026, 5, 12, 10, 3));
+
+        Message parentMessage = Message.create("TEXT", "  parent message  ", chatRoom, parent);
+        ReflectionTestUtils.setField(parentMessage, "id", 101L);
+        ReflectionTestUtils.setField(parentMessage, "createdAt", LocalDateTime.of(2026, 5, 12, 10, 0));
+
+        when(userRepository.findById(1L)).thenReturn(Optional.of(teacher));
+        when(chatRoomRepository.findById(15L)).thenReturn(Optional.of(chatRoom));
+        when(chatRoomRepository.existsParticipantByChatRoomIdAndUserId(15L, 1L)).thenReturn(true);
+        when(chatRoomUserMapRepository.findAllByChatRoomId(15L)).thenReturn(List.of(teacherMapping, parentMapping));
+        when(messageRepository.findPreviewMessages(eq(15L), eq(null), any())).thenReturn(List.of(teacherMessage, parentMessage));
+        when(messageRepository.existsOlderMessage(15L, 101L)).thenReturn(false);
+
+        ChatRoomMessageListData result = chatRoomService.getChatRoomMessages(1L, 15L, null, 30);
+
+        assertThat(result.messages()).extracting("content")
+                .containsExactly("  parent message  ", "  reviewed message  ");
     }
 }

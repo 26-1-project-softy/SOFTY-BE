@@ -71,16 +71,12 @@ public class Message extends BaseEntity {
     }
 
     public String resolveReportContent() {
-        if (hasText(modifyContent)) {
-            return modifyContent.trim();
+        if (modifyContent != null) {
+            return modifyContent;
         }
-        if (hasText(content)) {
-            return content.trim();
+        if (content != null) {
+            return content;
         }
         return "";
-    }
-
-    private boolean hasText(String value) {
-        return value != null && !value.trim().isEmpty();
     }
 }
