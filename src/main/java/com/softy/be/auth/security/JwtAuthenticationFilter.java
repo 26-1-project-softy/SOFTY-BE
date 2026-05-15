@@ -45,18 +45,18 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
         try {
             Long userId = jwtService.extractAccessUserId(token);
+            String activeRole = jwtService.extractActiveRole(token).trim().toUpperCase(Locale.ROOT);
             User user = userRepository.findById(userId).orElse(null);
             if (user == null) {
                 filterChain.doFilter(request, response);
                 return;
             }
 
-            String role = user.getRole() == null ? "" : user.getRole().trim().toUpperCase(Locale.ROOT);
-            AuthenticatedUserPrincipal principal = new AuthenticatedUserPrincipal(user.getId(), role, user.getName());
+            AuthenticatedUserPrincipal principal = new AuthenticatedUserPrincipal(user.getId(), activeRole, user.getName());
             UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(
                     principal,
                     null,
-                    List.of(new SimpleGrantedAuthority("ROLE_" + role))
+                    List.of(new SimpleGrantedAuthority("ROLE_" + activeRole))
             );
 
             SecurityContextHolder.getContext().setAuthentication(authentication);

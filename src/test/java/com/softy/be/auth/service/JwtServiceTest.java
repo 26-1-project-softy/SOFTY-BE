@@ -20,6 +20,7 @@ class JwtServiceTest {
         Long userId = jwtService.extractAccessUserId(accessToken);
 
         assertThat(userId).isEqualTo(7L);
+        assertThat(jwtService.extractActiveRole(accessToken)).isEqualTo("TEACHER");
     }
 
     @Test
