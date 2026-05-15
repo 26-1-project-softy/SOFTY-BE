@@ -96,7 +96,7 @@ class ChatRoomServiceTest {
         ChatRoom chatRoom = ChatRoom.create("CONSULT", ChatRoomStatus.IN_PROGRESS);
         ReflectionTestUtils.setField(chatRoom, "id", 15L);
 
-        ChatRoomUserMap mapping = ChatRoomUserMap.create(chatRoom, teacher, 0, null);
+        ChatRoomUserMap mapping = ChatRoomUserMap.create(chatRoom, teacher, "TEACHER", 0, null);
 
         when(userRepository.findById(1L)).thenReturn(Optional.of(teacher));
         when(chatRoomRepository.findById(15L)).thenReturn(Optional.of(chatRoom));
@@ -104,6 +104,7 @@ class ChatRoomServiceTest {
 
         ChatRoomStatusUpdateData result = chatRoomService.updateChatRoomStatus(
                 1L,
+                "TEACHER",
                 15L,
                 new ChatRoomStatusUpdateRequest(ChatRoomStatus.COMPLETED)
         );
@@ -122,10 +123,9 @@ class ChatRoomServiceTest {
         parent.completeParentSignup("parent");
         ReflectionTestUtils.setField(parent, "id", 2L);
 
-        when(userRepository.findById(2L)).thenReturn(Optional.of(parent));
-
         assertThatThrownBy(() -> chatRoomService.updateChatRoomStatus(
                 2L,
+                "PARENT",
                 15L,
                 new ChatRoomStatusUpdateRequest(ChatRoomStatus.COMPLETED)
         ))
@@ -140,6 +140,7 @@ class ChatRoomServiceTest {
     void updateChatRoomStatusRejectsMissingStatus() {
         assertThatThrownBy(() -> chatRoomService.updateChatRoomStatus(
                 1L,
+                "TEACHER",
                 15L,
                 new ChatRoomStatusUpdateRequest(null)
         ))
@@ -165,8 +166,8 @@ class ChatRoomServiceTest {
         ChatRoom chatRoom = ChatRoom.create("CONSULT", ChatRoomStatus.IN_PROGRESS);
         ReflectionTestUtils.setField(chatRoom, "id", 15L);
 
-        ChatRoomUserMap teacherMapping = ChatRoomUserMap.create(chatRoom, teacher, 0, LocalDateTime.of(2026, 5, 12, 9, 0));
-        ChatRoomUserMap parentMapping = ChatRoomUserMap.create(chatRoom, parent, 2, LocalDateTime.of(2026, 5, 12, 10, 1));
+        ChatRoomUserMap teacherMapping = ChatRoomUserMap.create(chatRoom, teacher, "TEACHER", 0, LocalDateTime.of(2026, 5, 12, 9, 0));
+        ChatRoomUserMap parentMapping = ChatRoomUserMap.create(chatRoom, parent, "PARENT", 2, LocalDateTime.of(2026, 5, 12, 10, 1));
 
         Message latestTeacherMessage = Message.create("TEXT", "latest", chatRoom, teacher);
         ReflectionTestUtils.setField(latestTeacherMessage, "id", 103L);
@@ -187,7 +188,7 @@ class ChatRoomServiceTest {
         when(messageRepository.findPreviewMessages(eq(15L), eq(null), any())).thenReturn(List.of(latestTeacherMessage, olderTeacherMessage, parentMessage));
         when(messageRepository.existsOlderMessage(15L, 101L)).thenReturn(false);
 
-        ChatRoomMessageListData result = chatRoomService.getChatRoomMessages(1L, 15L, null, 30);
+        ChatRoomMessageListData result = chatRoomService.getChatRoomMessages(1L, "TEACHER", 15L, null, 30);
 
         assertThat(result.messages()).hasSize(3);
         assertThat(result.messages().get(0).messageId()).isEqualTo(101L);
@@ -213,8 +214,8 @@ class ChatRoomServiceTest {
         ChatRoom chatRoom = ChatRoom.create("CONSULT", ChatRoomStatus.IN_PROGRESS);
         ReflectionTestUtils.setField(chatRoom, "id", 15L);
 
-        ChatRoomUserMap teacherMapping = ChatRoomUserMap.create(chatRoom, teacher, 0, LocalDateTime.of(2026, 5, 12, 9, 0));
-        ChatRoomUserMap parentMapping = ChatRoomUserMap.create(chatRoom, parent, 0, LocalDateTime.of(2026, 5, 12, 10, 5));
+        ChatRoomUserMap teacherMapping = ChatRoomUserMap.create(chatRoom, teacher, "TEACHER", 0, LocalDateTime.of(2026, 5, 12, 9, 0));
+        ChatRoomUserMap parentMapping = ChatRoomUserMap.create(chatRoom, parent, "PARENT", 0, LocalDateTime.of(2026, 5, 12, 10, 5));
 
         Message teacherMessage = Message.create("TEXT", "done", chatRoom, teacher);
         ReflectionTestUtils.setField(teacherMessage, "id", 102L);
@@ -231,7 +232,7 @@ class ChatRoomServiceTest {
         when(messageRepository.findPreviewMessages(eq(15L), eq(null), any())).thenReturn(List.of(teacherMessage, parentMessage));
         when(messageRepository.existsOlderMessage(15L, 101L)).thenReturn(false);
 
-        ChatRoomMessageListData result = chatRoomService.getChatRoomMessages(1L, 15L, null, 30);
+        ChatRoomMessageListData result = chatRoomService.getChatRoomMessages(1L, "TEACHER", 15L, null, 30);
 
         assertThat(result.messages()).hasSize(2);
         assertThat(result.messages())
@@ -251,8 +252,8 @@ class ChatRoomServiceTest {
         ChatRoom chatRoom = ChatRoom.create("CONSULT", ChatRoomStatus.IN_PROGRESS);
         ReflectionTestUtils.setField(chatRoom, "id", 15L);
 
-        ChatRoomUserMap parentMapping = ChatRoomUserMap.create(chatRoom, parent, 0, null);
-        ChatRoomUserMap teacherMapping = ChatRoomUserMap.create(chatRoom, teacher, 0, null);
+        ChatRoomUserMap parentMapping = ChatRoomUserMap.create(chatRoom, parent, "PARENT", 0, null);
+        ChatRoomUserMap teacherMapping = ChatRoomUserMap.create(chatRoom, teacher, "TEACHER", 0, null);
 
         when(userRepository.findById(2L)).thenReturn(Optional.of(parent));
         when(chatRoomRepository.findById(15L)).thenReturn(Optional.of(chatRoom));
@@ -260,7 +261,7 @@ class ChatRoomServiceTest {
         when(messageRepository.save(any(Message.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
         String rawContent = "  hello teacher  ";
-        var result = chatRoomService.sendChatRoomMessage(2L, 15L, new ChatRoomMessageSendRequest(rawContent));
+        var result = chatRoomService.sendChatRoomMessage(2L, "PARENT", 15L, new ChatRoomMessageSendRequest(rawContent));
 
         assertThat(result.content()).isEqualTo(rawContent);
     }
@@ -278,8 +279,8 @@ class ChatRoomServiceTest {
         ChatRoom chatRoom = ChatRoom.create("CONSULT", ChatRoomStatus.IN_PROGRESS);
         ReflectionTestUtils.setField(chatRoom, "id", 15L);
 
-        ChatRoomUserMap parentMapping = ChatRoomUserMap.create(chatRoom, parent, 0, null);
-        ChatRoomUserMap teacherMapping = ChatRoomUserMap.create(chatRoom, teacher, 0, null);
+        ChatRoomUserMap parentMapping = ChatRoomUserMap.create(chatRoom, parent, "PARENT", 0, null);
+        ChatRoomUserMap teacherMapping = ChatRoomUserMap.create(chatRoom, teacher, "TEACHER", 0, null);
 
         when(userRepository.findById(2L)).thenReturn(Optional.of(parent));
         when(chatRoomRepository.findById(15L)).thenReturn(Optional.of(chatRoom));
@@ -287,7 +288,7 @@ class ChatRoomServiceTest {
         when(messageRepository.save(any(Message.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
         String rawContent = "   ";
-        var result = chatRoomService.sendChatRoomMessage(2L, 15L, new ChatRoomMessageSendRequest(rawContent));
+        var result = chatRoomService.sendChatRoomMessage(2L, "PARENT", 15L, new ChatRoomMessageSendRequest(rawContent));
 
         assertThat(result.content()).isEqualTo(rawContent);
     }
@@ -301,7 +302,7 @@ class ChatRoomServiceTest {
         ChatRoom chatRoom = ChatRoom.create("CONSULT", ChatRoomStatus.IN_PROGRESS);
         ReflectionTestUtils.setField(chatRoom, "id", 15L);
 
-        ChatRoomUserMap teacherMapping = ChatRoomUserMap.create(chatRoom, teacher, 0, null);
+        ChatRoomUserMap teacherMapping = ChatRoomUserMap.create(chatRoom, teacher, "TEACHER", 0, null);
 
         MessageAnalysis analysis = MessageAnalysis.create(
                 chatRoom,
@@ -321,7 +322,7 @@ class ChatRoomServiceTest {
         when(messageRepository.save(any(Message.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
         String rawContent = "  final teacher message  ";
-        chatRoomService.sendTeacherMessage(1L, 15L, new TeacherMessageSendRequest(30L, rawContent));
+        chatRoomService.sendTeacherMessage(1L, "TEACHER", 15L, new TeacherMessageSendRequest(30L, rawContent));
 
         assertThat(analysis.getUsedMessage()).isNotNull();
         assertThat(analysis.getUsedMessage().getModifyContent()).isEqualTo(rawContent);
@@ -336,7 +337,7 @@ class ChatRoomServiceTest {
         ChatRoom chatRoom = ChatRoom.create("CONSULT", ChatRoomStatus.IN_PROGRESS);
         ReflectionTestUtils.setField(chatRoom, "id", 15L);
 
-        ChatRoomUserMap teacherMapping = ChatRoomUserMap.create(chatRoom, teacher, 0, null);
+        ChatRoomUserMap teacherMapping = ChatRoomUserMap.create(chatRoom, teacher, "TEACHER", 0, null);
 
         MessageAnalysis analysis = MessageAnalysis.create(
                 chatRoom,
@@ -356,7 +357,7 @@ class ChatRoomServiceTest {
         when(messageRepository.save(any(Message.class))).thenAnswer(invocation -> invocation.getArgument(0));
         when(aiRecommendationRepository.save(any(AiRecommendation.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
-        chatRoomService.sendTeacherMessage(1L, 15L, new TeacherMessageSendRequest(31L, "  recommendation  "));
+        chatRoomService.sendTeacherMessage(1L, "TEACHER", 15L, new TeacherMessageSendRequest(31L, "  recommendation  "));
 
         ArgumentCaptor<AiRecommendation> recommendationCaptor = ArgumentCaptor.forClass(AiRecommendation.class);
         verify(aiRecommendationRepository).save(recommendationCaptor.capture());
@@ -383,7 +384,7 @@ class ChatRoomServiceTest {
         when(parentStudentRepository.findFirstByParentIdOrderByIdDesc(2L)).thenReturn(Optional.of(parentStudent));
         when(intentClassificationClient.classifyIntent("  need help  ")).thenReturn("CONSULT");
 
-        var result = chatRoomService.analyzeInitMessageIntent(2L, new InitMessageIntentRequest("  need help  "));
+        var result = chatRoomService.analyzeInitMessageIntent(2L, "PARENT", new InitMessageIntentRequest("  need help  "));
 
         assertThat(result.intentLabel()).isEqualTo("CONSULT");
     }
@@ -403,8 +404,8 @@ class ChatRoomServiceTest {
         ChatRoom chatRoom = ChatRoom.create("CONSULT", ChatRoomStatus.IN_PROGRESS);
         ReflectionTestUtils.setField(chatRoom, "id", 15L);
 
-        ChatRoomUserMap teacherMapping = ChatRoomUserMap.create(chatRoom, teacher, 0, LocalDateTime.of(2026, 5, 12, 9, 0));
-        ChatRoomUserMap parentMapping = ChatRoomUserMap.create(chatRoom, parent, 0, LocalDateTime.of(2026, 5, 12, 10, 5));
+        ChatRoomUserMap teacherMapping = ChatRoomUserMap.create(chatRoom, teacher, "TEACHER", 0, LocalDateTime.of(2026, 5, 12, 9, 0));
+        ChatRoomUserMap parentMapping = ChatRoomUserMap.create(chatRoom, parent, "PARENT", 0, LocalDateTime.of(2026, 5, 12, 10, 5));
 
         Message teacherMessage = Message.createReviewed("TEXT", "original", "  reviewed message  ", false, chatRoom, teacher);
         ReflectionTestUtils.setField(teacherMessage, "id", 102L);
@@ -421,7 +422,7 @@ class ChatRoomServiceTest {
         when(messageRepository.findPreviewMessages(eq(15L), eq(null), any())).thenReturn(List.of(teacherMessage, parentMessage));
         when(messageRepository.existsOlderMessage(15L, 101L)).thenReturn(false);
 
-        ChatRoomMessageListData result = chatRoomService.getChatRoomMessages(1L, 15L, null, 30);
+        ChatRoomMessageListData result = chatRoomService.getChatRoomMessages(1L, "TEACHER", 15L, null, 30);
 
         assertThat(result.messages()).extracting("content")
                 .containsExactly("  parent message  ", "  reviewed message  ");

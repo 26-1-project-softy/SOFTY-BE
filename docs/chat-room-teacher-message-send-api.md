@@ -1,6 +1,7 @@
 # 교사 최종 메시지 전송 API
 
 - 엔드포인트: `POST /chat-rooms/{chatRoomId}/teacher-messages`
+- 현재 세션의 `activeRole`이 `TEACHER`여야 함
 - 목적: 교사가 AI 분석 결과를 참고해 최종 메시지를 전송한다.
 - 부수 동작:
   - 최종 메시지를 저장한다.

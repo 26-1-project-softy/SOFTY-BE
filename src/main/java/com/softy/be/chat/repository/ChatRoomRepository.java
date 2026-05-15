@@ -21,7 +21,7 @@ public interface ChatRoomRepository extends JpaRepository<ChatRoom, Long> {
                                 FROM chat_room_user_map crm2
                                 JOIN users pu ON pu.id = crm2.user_id
                                 WHERE crm2.chat_room_id = cr.id
-                                  AND UPPER(pu.role) = 'PARENT'
+                                  AND crm2.participant_role = 'PARENT'
                                 ORDER BY crm2.id DESC
                                 LIMIT 1
                             ),
@@ -33,11 +33,10 @@ public interface ChatRoomRepository extends JpaRepository<ChatRoom, Long> {
                                 FROM parent_student ps
                                 JOIN student s ON s.id = ps.student_id
                                 WHERE ps.parent_id = (
-                                    SELECT pu2.id
+                                    SELECT crm3.user_id
                                     FROM chat_room_user_map crm3
-                                    JOIN users pu2 ON pu2.id = crm3.user_id
                                     WHERE crm3.chat_room_id = cr.id
-                                      AND UPPER(pu2.role) = 'PARENT'
+                                      AND crm3.participant_role = 'PARENT'
                                     ORDER BY crm3.id DESC
                                     LIMIT 1
                                 )
@@ -71,7 +70,7 @@ public interface ChatRoomRepository extends JpaRepository<ChatRoom, Long> {
                                 FROM chat_room_user_map crm2
                                 JOIN users tu ON tu.id = crm2.user_id
                                 WHERE crm2.chat_room_id = cr.id
-                                  AND UPPER(tu.role) = 'TEACHER'
+                                  AND crm2.participant_role = 'TEACHER'
                                 ORDER BY crm2.id DESC
                                 LIMIT 1
                             ),
@@ -143,7 +142,7 @@ public interface ChatRoomRepository extends JpaRepository<ChatRoom, Long> {
                                 FROM chat_room_user_map crm2
                                 JOIN users pu ON pu.id = crm2.user_id
                                 WHERE crm2.chat_room_id = cr.id
-                                  AND UPPER(pu.role) = 'PARENT'
+                                  AND crm2.participant_role = 'PARENT'
                                 ORDER BY crm2.id DESC
                                 LIMIT 1
                             ),
@@ -155,11 +154,10 @@ public interface ChatRoomRepository extends JpaRepository<ChatRoom, Long> {
                                 FROM parent_student ps
                                 JOIN student s ON s.id = ps.student_id
                                 WHERE ps.parent_id = (
-                                    SELECT pu2.id
+                                    SELECT crm3.user_id
                                     FROM chat_room_user_map crm3
-                                    JOIN users pu2 ON pu2.id = crm3.user_id
                                     WHERE crm3.chat_room_id = cr.id
-                                      AND UPPER(pu2.role) = 'PARENT'
+                                      AND crm3.participant_role = 'PARENT'
                                     ORDER BY crm3.id DESC
                                     LIMIT 1
                                 )
@@ -238,7 +236,7 @@ public interface ChatRoomRepository extends JpaRepository<ChatRoom, Long> {
                                 FROM chat_room_user_map crm2
                                 JOIN users tu ON tu.id = crm2.user_id
                                 WHERE crm2.chat_room_id = cr.id
-                                  AND UPPER(tu.role) = 'TEACHER'
+                                  AND crm2.participant_role = 'TEACHER'
                                 ORDER BY crm2.id DESC
                                 LIMIT 1
                             ),
@@ -307,7 +305,7 @@ public interface ChatRoomRepository extends JpaRepository<ChatRoom, Long> {
                             FROM chat_room_user_map crm2
                             JOIN users pu ON pu.id = crm2.user_id
                             WHERE crm2.chat_room_id = cr.id
-                              AND UPPER(pu.role) = 'PARENT'
+                              AND crm2.participant_role = 'PARENT'
                             ORDER BY crm2.id DESC
                             LIMIT 1
                         ) AS parentName,
@@ -316,11 +314,10 @@ public interface ChatRoomRepository extends JpaRepository<ChatRoom, Long> {
                             FROM parent_student ps
                             JOIN student s ON s.id = ps.student_id
                             WHERE ps.parent_id = (
-                                SELECT pu2.id
+                                SELECT crm3.user_id
                                 FROM chat_room_user_map crm3
-                                JOIN users pu2 ON pu2.id = crm3.user_id
                                 WHERE crm3.chat_room_id = cr.id
-                                  AND UPPER(pu2.role) = 'PARENT'
+                                  AND crm3.participant_role = 'PARENT'
                                 ORDER BY crm3.id DESC
                                 LIMIT 1
                             )
@@ -367,7 +364,7 @@ public interface ChatRoomRepository extends JpaRepository<ChatRoom, Long> {
                     FROM chat_room_user_map crm
                     JOIN users pu ON pu.id = crm.user_id
                     WHERE crm.chat_room_id = :chatRoomId
-                      AND UPPER(pu.role) = 'PARENT'
+                      AND crm.participant_role = 'PARENT'
                     ORDER BY crm.id DESC
                     LIMIT 1
                     """,

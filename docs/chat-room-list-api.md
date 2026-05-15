@@ -3,6 +3,7 @@
 ## 개요
 - 로그인한 사용자가 참여 중인 채팅방 목록을 조회하는 API
 - 엔드포인트: `GET /chat-rooms`
+- 현재 세션의 `activeRole`이 `TEACHER` 또는 `PARENT`여야 함
 - 대상 사용자: 학부모(`PARENT`), 교사(`TEACHER`)
 - 페이징 방식: 커서 기반
 

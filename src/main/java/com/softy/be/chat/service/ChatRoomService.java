@@ -14,8 +14,8 @@ import com.softy.be.chat.dto.InitMessageIntentData;
 import com.softy.be.chat.dto.InitMessageIntentRequest;
 import com.softy.be.chat.dto.InitMessageSendData;
 import com.softy.be.chat.dto.InitMessageSendRequest;
-import com.softy.be.chat.dto.TeacherMessageAnalyzeFeedbackRequest;
 import com.softy.be.chat.dto.TeacherMessageAnalyzeData;
+import com.softy.be.chat.dto.TeacherMessageAnalyzeFeedbackRequest;
 import com.softy.be.chat.dto.TeacherMessageAnalyzeRequest;
 import com.softy.be.chat.dto.TeacherMessageSendData;
 import com.softy.be.chat.dto.TeacherMessageSendRequest;
@@ -27,10 +27,10 @@ import com.softy.be.chat.entity.ChatRoomStatus;
 import com.softy.be.chat.entity.ChatRoomUserMap;
 import com.softy.be.chat.entity.Message;
 import com.softy.be.chat.entity.MessageAnalysis;
-import com.softy.be.chat.repository.ChatRoomDetailRow;
-import com.softy.be.chat.repository.ChatRoomListRow;
 import com.softy.be.chat.repository.AiFeedbackRepository;
 import com.softy.be.chat.repository.AiRecommendationRepository;
+import com.softy.be.chat.repository.ChatRoomDetailRow;
+import com.softy.be.chat.repository.ChatRoomListRow;
 import com.softy.be.chat.repository.ChatRoomRepository;
 import com.softy.be.chat.repository.ChatRoomUserMapRepository;
 import com.softy.be.chat.repository.MessageAnalysisRepository;
@@ -54,8 +54,10 @@ import java.time.LocalTime;
 import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 
 @Service
 @RequiredArgsConstructor
@@ -82,17 +84,12 @@ public class ChatRoomService {
     private final TeacherMessageAnalysisClient teacherMessageAnalysisClient;
 
     @Transactional(readOnly = true)
-    public ChatRoomDetailData getChatRoomDetail(Long userId, Long chatRoomId) {
+    public ChatRoomDetailData getChatRoomDetail(Long userId, String activeRole, Long chatRoomId) {
         if (chatRoomId == null || chatRoomId <= 0) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "chatRoomId는 1 이상이어야 합니다.");
         }
 
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "사용자를 찾을 수 없습니다."));
-
-        if (!ROLE_TEACHER.equalsIgnoreCase(user.getRole()) && !ROLE_PARENT.equalsIgnoreCase(user.getRole())) {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "학부모 또는 교사 계정만 조회할 수 있습니다.");
-        }
+        getChatUser(userId, activeRole);
 
         chatRoomRepository.findById(chatRoomId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "채팅방을 찾을 수 없습니다."));
@@ -102,7 +99,7 @@ public class ChatRoomService {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "해당 채팅방에 접근할 권한이 없습니다.");
         }
 
-        ChatRoomDetailRow row = ROLE_TEACHER.equalsIgnoreCase(user.getRole())
+        ChatRoomDetailRow row = ROLE_TEACHER.equalsIgnoreCase(activeRole)
                 ? chatRoomRepository.findChatRoomDetailByTeacherIdAndChatRoomId(userId, chatRoomId)
                 : chatRoomRepository.findChatRoomDetailByParentIdAndChatRoomId(userId, chatRoomId);
 
@@ -120,13 +117,18 @@ public class ChatRoomService {
     }
 
     @Transactional
-    public ChatRoomStatusUpdateData updateChatRoomStatus(Long userId, Long chatRoomId, ChatRoomStatusUpdateRequest request) {
+    public ChatRoomStatusUpdateData updateChatRoomStatus(
+            Long userId,
+            String activeRole,
+            Long chatRoomId,
+            ChatRoomStatusUpdateRequest request
+    ) {
         if (chatRoomId == null || chatRoomId <= 0) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "chatRoomId는 1 이상이어야 합니다.");
         }
         validateChatRoomStatusUpdateRequest(request);
 
-        getTeacherUser(userId);
+        getTeacherUser(userId, activeRole);
         ChatRoomUserMap mapping = getChatRoomParticipantMapping(chatRoomId, userId);
         ChatRoom chatRoom = mapping.getChatRoom();
         chatRoom.updateStatus(request.status());
@@ -135,48 +137,63 @@ public class ChatRoomService {
     }
 
     @Transactional
-    public TeacherMessageAnalyzeData analyzeTeacherMessage(Long userId, Long chatRoomId, TeacherMessageAnalyzeRequest request) {
+    public TeacherMessageAnalyzeData analyzeTeacherMessage(
+            Long userId,
+            String activeRole,
+            Long chatRoomId,
+            TeacherMessageAnalyzeRequest request
+    ) {
         if (chatRoomId == null || chatRoomId <= 0) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "chatRoomId는 1 이상이어야 합니다.");
         }
         validateTeacherMessageAnalyzeRequest(request);
 
-        User teacher = getTeacherUser(userId);
+        User teacher = getTeacherUser(userId, activeRole);
         ChatRoomUserMap mapping = getChatRoomParticipantMapping(chatRoomId, userId);
         return analyzeTeacherMessageContent(teacher, mapping.getChatRoom(), request.content());
     }
 
     @Transactional
-    public TeacherMessageAnalyzeData recheckTeacherMessage(Long userId, Long analysisId, TeacherMessageAnalyzeRequest request) {
+    public TeacherMessageAnalyzeData recheckTeacherMessage(
+            Long userId,
+            String activeRole,
+            Long analysisId,
+            TeacherMessageAnalyzeRequest request
+    ) {
         if (analysisId == null || analysisId <= 0) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "analysisId는 1 이상이어야 합니다.");
         }
         validateTeacherMessageAnalyzeRequest(request);
 
-        User teacher = getTeacherUser(userId);
+        User teacher = getTeacherUser(userId, activeRole);
         MessageAnalysis baseAnalysis = messageAnalysisRepository.findById(analysisId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "메시지 분석 결과를 찾을 수 없습니다."));
 
         if (!baseAnalysis.getTeacher().getId().equals(teacher.getId())) {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "본인의 메시지 분석 결과만 재분석할 수 있습니다.");
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "본인 메시지 분석 결과만 재분석할 수 있습니다.");
         }
 
         return analyzeTeacherMessageContent(teacher, baseAnalysis.getChatRoom(), request.content());
     }
 
     @Transactional
-    public void saveTeacherMessageAnalyzeFeedback(Long userId, Long analysisId, TeacherMessageAnalyzeFeedbackRequest request) {
+    public void saveTeacherMessageAnalyzeFeedback(
+            Long userId,
+            String activeRole,
+            Long analysisId,
+            TeacherMessageAnalyzeFeedbackRequest request
+    ) {
         if (analysisId == null || analysisId <= 0) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "analysisId는 1 이상이어야 합니다.");
         }
         validateTeacherMessageAnalyzeFeedbackRequest(request);
 
-        User teacher = getTeacherUser(userId);
+        User teacher = getTeacherUser(userId, activeRole);
         MessageAnalysis analysis = messageAnalysisRepository.findById(analysisId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "메시지 분석 결과를 찾을 수 없습니다."));
 
         if (!analysis.getTeacher().getId().equals(teacher.getId())) {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "본인의 메시지 분석 결과에만 피드백을 남길 수 있습니다.");
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "본인 메시지 분석 결과에만 피드백을 남길 수 있습니다.");
         }
 
         AiFeedback feedback = aiFeedbackRepository.findFirstByMessageAnalysisId(analysis.getId())
@@ -187,17 +204,17 @@ public class ChatRoomService {
     }
 
     @Transactional
-    public void saveTeacherMessageRecommendationAdoption(Long userId, Long analysisId) {
+    public void saveTeacherMessageRecommendationAdoption(Long userId, String activeRole, Long analysisId) {
         if (analysisId == null || analysisId <= 0) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "analysisId는 1 이상이어야 합니다.");
         }
 
-        User teacher = getTeacherUser(userId);
+        User teacher = getTeacherUser(userId, activeRole);
         MessageAnalysis analysis = messageAnalysisRepository.findById(analysisId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "메시지 분석 결과를 찾을 수 없습니다."));
 
         if (!analysis.getTeacher().getId().equals(teacher.getId())) {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "본인의 메시지 분석 결과에만 추천문장 적용을 기록할 수 있습니다.");
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "본인 메시지 분석 결과에만 추천문장 적용을 기록할 수 있습니다.");
         }
         if (isBlank(analysis.getRecommendedMessage())) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "추천문장이 없는 분석 결과에는 적용을 기록할 수 없습니다.");
@@ -207,22 +224,27 @@ public class ChatRoomService {
     }
 
     @Transactional
-    public TeacherMessageSendData sendTeacherMessage(Long userId, Long chatRoomId, TeacherMessageSendRequest request) {
+    public TeacherMessageSendData sendTeacherMessage(
+            Long userId,
+            String activeRole,
+            Long chatRoomId,
+            TeacherMessageSendRequest request
+    ) {
         if (chatRoomId == null || chatRoomId <= 0) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "chatRoomId는 1 이상이어야 합니다.");
         }
         validateTeacherMessageSendRequest(request);
 
-        User teacher = getTeacherUser(userId);
+        User teacher = getTeacherUser(userId, activeRole);
         ChatRoomUserMap senderMapping = getChatRoomParticipantMapping(chatRoomId, userId);
         MessageAnalysis analysis = messageAnalysisRepository.findById(request.analysisId())
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "메시지 분석 결과를 찾을 수 없습니다."));
 
         if (!analysis.getTeacher().getId().equals(teacher.getId())) {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "본인의 메시지 분석 결과로만 메시지를 전송할 수 있습니다.");
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "본인 메시지 분석 결과로만 메시지를 전송할 수 있습니다.");
         }
         if (!analysis.getChatRoom().getId().equals(chatRoomId)) {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "현재 채팅방에 속한 분석 결과로만 메시지를 전송할 수 있습니다.");
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "현재 채팅방에 대한 분석 결과로만 메시지를 전송할 수 있습니다.");
         }
         if (analysis.getUsedMessage() != null) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "이미 사용된 분석 결과로는 다시 메시지를 전송할 수 없습니다.");
@@ -260,18 +282,18 @@ public class ChatRoomService {
     }
 
     @Transactional
-    public ChatRoomMessageSendData sendChatRoomMessage(Long userId, Long chatRoomId, ChatRoomMessageSendRequest request) {
+    public ChatRoomMessageSendData sendChatRoomMessage(
+            Long userId,
+            String activeRole,
+            Long chatRoomId,
+            ChatRoomMessageSendRequest request
+    ) {
         if (chatRoomId == null || chatRoomId <= 0) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "chatRoomId는 1 이상이어야 합니다.");
         }
         validateChatRoomMessageSendRequest(request);
 
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "사용자를 찾을 수 없습니다."));
-
-        if (!ROLE_PARENT.equalsIgnoreCase(user.getRole())) {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "학부모 계정만 메시지를 전송할 수 있습니다.");
-        }
+        User user = getParentUser(userId, activeRole);
 
         chatRoomRepository.findById(chatRoomId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "채팅방을 찾을 수 없습니다."));
@@ -307,17 +329,12 @@ public class ChatRoomService {
     }
 
     @Transactional
-    public ChatRoomReadData markChatRoomAsRead(Long userId, Long chatRoomId) {
+    public ChatRoomReadData markChatRoomAsRead(Long userId, String activeRole, Long chatRoomId) {
         if (chatRoomId == null || chatRoomId <= 0) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "chatRoomId는 1 이상이어야 합니다.");
         }
 
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "사용자를 찾을 수 없습니다."));
-
-        if (!ROLE_TEACHER.equalsIgnoreCase(user.getRole()) && !ROLE_PARENT.equalsIgnoreCase(user.getRole())) {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "학부모 또는 교사 계정만 조회할 수 있습니다.");
-        }
+        getChatUser(userId, activeRole);
 
         chatRoomRepository.findById(chatRoomId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "채팅방을 찾을 수 없습니다."));
@@ -336,7 +353,13 @@ public class ChatRoomService {
     }
 
     @Transactional(readOnly = true)
-    public ChatRoomMessageListData getChatRoomMessages(Long userId, Long chatRoomId, Long cursor, int size) {
+    public ChatRoomMessageListData getChatRoomMessages(
+            Long userId,
+            String activeRole,
+            Long chatRoomId,
+            Long cursor,
+            int size
+    ) {
         if (chatRoomId == null || chatRoomId <= 0) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "chatRoomId는 1 이상이어야 합니다.");
         }
@@ -347,12 +370,7 @@ public class ChatRoomService {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "size는 1~100 사이여야 합니다.");
         }
 
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "사용자를 찾을 수 없습니다."));
-
-        if (!ROLE_TEACHER.equalsIgnoreCase(user.getRole()) && !ROLE_PARENT.equalsIgnoreCase(user.getRole())) {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "학부모 또는 교사 계정만 조회할 수 있습니다.");
-        }
+        getChatUser(userId, activeRole);
 
         chatRoomRepository.findById(chatRoomId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "채팅방을 찾을 수 없습니다."));
@@ -362,11 +380,13 @@ public class ChatRoomService {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "해당 채팅방에 접근할 권한이 없습니다.");
         }
 
-        LocalDateTime counterpartLastReadAt = chatRoomUserMapRepository.findAllByChatRoomId(chatRoomId).stream()
+        List<ChatRoomUserMap> mappings = chatRoomUserMapRepository.findAllByChatRoomId(chatRoomId);
+        LocalDateTime counterpartLastReadAt = mappings.stream()
                 .filter(mapping -> !mapping.getUser().getId().equals(userId))
                 .findFirst()
                 .map(ChatRoomUserMap::getLastReadAt)
                 .orElse(null);
+        Map<Long, String> participantRolesByUserId = getParticipantRolesByUserId(mappings);
 
         List<Message> descendingMessages = messageRepository.findPreviewMessages(
                 chatRoomId,
@@ -381,7 +401,7 @@ public class ChatRoomService {
                     message.getId(),
                     isMine,
                     nullToEmpty(message.getSender().getName()),
-                    nullToEmpty(message.getSender().getRole()),
+                    nullToEmpty(participantRolesByUserId.get(message.getSender().getId())),
                     message.resolveReportContent(),
                     message.getCreatedAt(),
                     isUnreadByCounterpart(message, userId, counterpartLastReadAt)
@@ -401,7 +421,7 @@ public class ChatRoomService {
     }
 
     @Transactional(readOnly = true)
-    public ChatRoomListData getChatRooms(Long userId, Long cursor, int size) {
+    public ChatRoomListData getChatRooms(Long userId, String activeRole, Long cursor, int size) {
         if (cursor != null && cursor <= 0) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "cursor는 1 이상이어야 합니다.");
         }
@@ -409,14 +429,13 @@ public class ChatRoomService {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "size는 1~100 사이여야 합니다.");
         }
 
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "사용자를 찾을 수 없습니다."));
-
         List<ChatRoomListRow> result;
         PageRequest pageable = PageRequest.of(0, size + 1);
-        if (ROLE_TEACHER.equalsIgnoreCase(user.getRole())) {
+        if (ROLE_TEACHER.equalsIgnoreCase(activeRole)) {
+            getTeacherUser(userId, activeRole);
             result = chatRoomRepository.findChatRoomsByTeacherId(userId, cursor, pageable);
-        } else if (ROLE_PARENT.equalsIgnoreCase(user.getRole())) {
+        } else if (ROLE_PARENT.equalsIgnoreCase(activeRole)) {
+            getParentUser(userId, activeRole);
             result = chatRoomRepository.findChatRoomsByParentId(userId, cursor, pageable);
         } else {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "학부모 또는 교사 계정만 조회할 수 있습니다.");
@@ -437,25 +456,25 @@ public class ChatRoomService {
     }
 
     @Transactional(readOnly = true)
-    public InitMessageIntentData analyzeInitMessageIntent(Long userId, InitMessageIntentRequest request) {
+    public InitMessageIntentData analyzeInitMessageIntent(Long userId, String activeRole, InitMessageIntentRequest request) {
         validateIntentRequest(request);
-        resolveParentTeacherLink(userId);
+        resolveParentTeacherLink(userId, activeRole);
 
         String intentLabel = intentClassificationClient.classifyIntent(request.content());
         return new InitMessageIntentData(intentLabel);
     }
 
     @Transactional(readOnly = true)
-    public TeacherWorkingHoursStatusData getTeacherWorkingHoursStatus(Long userId) {
-        ParentTeacherLink link = resolveParentTeacherLink(userId);
+    public TeacherWorkingHoursStatusData getTeacherWorkingHoursStatus(Long userId, String activeRole) {
+        ParentTeacherLink link = resolveParentTeacherLink(userId, activeRole);
         return new TeacherWorkingHoursStatusData(isTeacherInWorkingHours(link.teacher().getId()));
     }
 
     @Transactional
-    public InitMessageSendData sendInitMessage(Long userId, InitMessageSendRequest request) {
+    public InitMessageSendData sendInitMessage(Long userId, String activeRole, InitMessageSendRequest request) {
         validateSendRequest(request);
 
-        ParentTeacherLink link = resolveParentTeacherLink(userId);
+        ParentTeacherLink link = resolveParentTeacherLink(userId, activeRole);
         User parent = link.parent();
         User teacher = link.teacher();
 
@@ -465,8 +484,8 @@ public class ChatRoomService {
         ));
 
         LocalDateTime now = LocalDateTime.now();
-        chatRoomUserMapRepository.save(ChatRoomUserMap.create(chatRoom, parent, 0, now));
-        chatRoomUserMapRepository.save(ChatRoomUserMap.create(chatRoom, teacher, 1, null));
+        chatRoomUserMapRepository.save(ChatRoomUserMap.create(chatRoom, parent, ROLE_PARENT, 0, now));
+        chatRoomUserMapRepository.save(ChatRoomUserMap.create(chatRoom, teacher, ROLE_TEACHER, 1, null));
 
         Message message = messageRepository.save(Message.create(
                 MESSAGE_TYPE_TEXT,
@@ -478,13 +497,8 @@ public class ChatRoomService {
         return new InitMessageSendData(chatRoom.getId(), message.getId());
     }
 
-    private ParentTeacherLink resolveParentTeacherLink(Long userId) {
-        User parent = userRepository.findById(userId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "사용자를 찾을 수 없습니다."));
-
-        if (!ROLE_PARENT.equalsIgnoreCase(parent.getRole())) {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "학부모 계정만 요청할 수 있습니다.");
-        }
+    private ParentTeacherLink resolveParentTeacherLink(Long userId, String activeRole) {
+        User parent = getParentUser(userId, activeRole);
 
         ParentStudent mapping = parentStudentRepository.findFirstByParentIdOrderByIdDesc(userId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "연결된 자녀 정보를 찾을 수 없습니다."));
@@ -498,14 +512,40 @@ public class ChatRoomService {
         return new ParentTeacherLink(parent, mapping.getStudent().getClassroom().getTeacher());
     }
 
-    private User getTeacherUser(Long userId) {
-        User teacher = userRepository.findById(userId)
+    private User getTeacherUser(Long userId, String activeRole) {
+        return getUserByActiveRole(userId, activeRole, ROLE_TEACHER, "교사 계정만 요청할 수 있습니다.");
+    }
+
+    private User getParentUser(Long userId, String activeRole) {
+        return getUserByActiveRole(userId, activeRole, ROLE_PARENT, "학부모 계정만 요청할 수 있습니다.");
+    }
+
+    private User getChatUser(Long userId, String activeRole) {
+        if (ROLE_TEACHER.equalsIgnoreCase(activeRole)) {
+            return getTeacherUser(userId, activeRole);
+        }
+        if (ROLE_PARENT.equalsIgnoreCase(activeRole)) {
+            return getParentUser(userId, activeRole);
+        }
+        throw new ResponseStatusException(HttpStatus.FORBIDDEN, "학부모 또는 교사 계정만 조회할 수 있습니다.");
+    }
+
+    private User getUserByActiveRole(Long userId, String activeRole, String requiredRole, String forbiddenMessage) {
+        validateActiveRole(activeRole, requiredRole, forbiddenMessage);
+
+        User user = userRepository.findById(userId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "사용자를 찾을 수 없습니다."));
 
-        if (!ROLE_TEACHER.equalsIgnoreCase(teacher.getRole())) {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "교사 계정만 요청할 수 있습니다.");
+        if (!user.hasRole(requiredRole)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, forbiddenMessage);
         }
-        return teacher;
+        return user;
+    }
+
+    private void validateActiveRole(String activeRole, String requiredRole, String forbiddenMessage) {
+        if (!requiredRole.equalsIgnoreCase(activeRole)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, forbiddenMessage);
+        }
     }
 
     private ChatRoomUserMap getChatRoomParticipantMapping(Long chatRoomId, Long userId) {
@@ -603,6 +643,14 @@ public class ChatRoomService {
                 analysis.getRiskLevel(),
                 analysis.getRecommendedMessage()
         );
+    }
+
+    private Map<Long, String> getParticipantRolesByUserId(List<ChatRoomUserMap> mappings) {
+        Map<Long, String> participantRolesByUserId = new HashMap<>();
+        for (ChatRoomUserMap mapping : mappings) {
+            participantRolesByUserId.put(mapping.getUser().getId(), mapping.getParticipantRole());
+        }
+        return participantRolesByUserId;
     }
 
     private boolean isBlank(String value) {

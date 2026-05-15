@@ -33,14 +33,23 @@ public class ChatRoomUserMap extends BaseEntity {
     @JoinColumn(name = "user_id", nullable = false)
     private User user;
 
+    private String participantRole;
+
     private int unreadCount;
 
     private LocalDateTime lastReadAt;
 
-    public static ChatRoomUserMap create(ChatRoom chatRoom, User user, int unreadCount, LocalDateTime lastReadAt) {
+    public static ChatRoomUserMap create(
+            ChatRoom chatRoom,
+            User user,
+            String participantRole,
+            int unreadCount,
+            LocalDateTime lastReadAt
+    ) {
         ChatRoomUserMap mapping = new ChatRoomUserMap();
         mapping.chatRoom = chatRoom;
         mapping.user = user;
+        mapping.participantRole = participantRole;
         mapping.unreadCount = unreadCount;
         mapping.lastReadAt = lastReadAt;
         return mapping;
