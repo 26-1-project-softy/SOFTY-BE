@@ -42,8 +42,8 @@ public class AdminAuthService {
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "로그인 정보가 올바르지 않습니다.");
         }
 
-        String accessToken = jwtService.createAccessToken(user.getId(), user.getName(), user.getRole());
-        String refreshToken = jwtService.createRefreshToken(user.getId(), user.getRole());
+        String accessToken = jwtService.createAccessToken(user.getId(), user.getName(), ADMIN_ROLE);
+        String refreshToken = jwtService.createRefreshToken(user.getId(), ADMIN_ROLE);
 
         return new AdminLoginResult(accessToken, refreshToken);
     }
