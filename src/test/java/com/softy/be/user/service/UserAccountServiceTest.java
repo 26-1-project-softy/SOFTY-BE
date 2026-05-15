@@ -75,7 +75,7 @@ class UserAccountServiceTest {
         parentStudentRepository.save(ParentStudent.create(parent, originalStudent));
         classCodeRepository.save(ClassCode.create("NEW-123", targetClassroom));
 
-        userAccountService.updateParentClass(parent.getId(), new ParentClassUpdateRequest("NEW-123"));
+        userAccountService.updateParentClass(parent.getId(), "PARENT", new ParentClassUpdateRequest("NEW-123"));
 
         ParentStudent reloadedMapping = parentStudentRepository.findFirstByParentIdOrderByIdDesc(parent.getId()).orElseThrow();
         Student reloadedOriginalStudent = studentRepository.findById(originalStudent.getId()).orElseThrow();
@@ -111,7 +111,7 @@ class UserAccountServiceTest {
         parentStudentRepository.save(ParentStudent.create(parent, originalStudent));
         classCodeRepository.save(ClassCode.create("REUSE-1", targetClassroom));
 
-        userAccountService.updateParentClass(parent.getId(), new ParentClassUpdateRequest("REUSE-1"));
+        userAccountService.updateParentClass(parent.getId(), "PARENT", new ParentClassUpdateRequest("REUSE-1"));
 
         ParentStudent reloadedMapping = parentStudentRepository.findFirstByParentIdOrderByIdDesc(parent.getId()).orElseThrow();
         Student reloadedOriginalStudent = studentRepository.findById(originalStudent.getId()).orElseThrow();
@@ -127,6 +127,7 @@ class UserAccountServiceTest {
 
         userAccountService.updateTeacherWorkHours(
                 teacher.getId(),
+                "TEACHER",
                 new TeacherWorkHoursUpdateRequest(List.of(
                         new TeacherWorkHoursScheduleRequest((short) 1, LocalTime.of(9, 30), LocalTime.of(16, 0)),
                         new TeacherWorkHoursScheduleRequest((short) 3, LocalTime.of(10, 0), LocalTime.of(18, 0))

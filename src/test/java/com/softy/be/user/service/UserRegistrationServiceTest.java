@@ -57,7 +57,7 @@ class UserRegistrationServiceTest {
         );
 
         Classroom classroom = classroomRepository.findFirstByTeacherIdOrderByIdDesc(savedUser.getId()).orElseThrow();
-        ClassCodeCreateResult classCodeResult = userRegistrationService.createTeacherClassCode(savedUser.getId());
+        ClassCodeCreateResult classCodeResult = userRegistrationService.createTeacherClassCode(savedUser.getId(), "TEACHER");
 
         assertThat(classCodeResult.classCode()).isNotBlank();
         assertThat(classCodeRepository.findFirstByClassroomIdAndIsActiveTrueOrderByIdDesc(classroom.getId()))

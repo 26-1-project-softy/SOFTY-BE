@@ -1,7 +1,7 @@
 package com.softy.be.user.service;
 
 public record UserMeResult(
-        String role,
+        String activeRole,
         String name,
         Integer grade,
         Integer classNumber

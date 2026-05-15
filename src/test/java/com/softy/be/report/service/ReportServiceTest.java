@@ -66,7 +66,7 @@ class ReportServiceTest {
         when(chatRoomRepository.findById(99L)).thenReturn(Optional.of(chatRoom));
         when(chatRoomRepository.existsParticipantByChatRoomIdAndUserId(99L, 1L)).thenReturn(false);
 
-        assertThatThrownBy(() -> reportService.createPdf(1L, 99L))
+        assertThatThrownBy(() -> reportService.createPdf(1L, "TEACHER", 99L))
                 .isInstanceOf(ResponseStatusException.class)
                 .satisfies(exception -> assertThat(((ResponseStatusException) exception).getStatusCode())
                         .isEqualTo(HttpStatus.FORBIDDEN));
@@ -103,7 +103,7 @@ class ReportServiceTest {
                 .thenReturn(List.of(teacherMessage, parentMessage));
         when(messageRepository.existsOlderMessage(99L, 101L)).thenReturn(false);
 
-        ReportChatPreviewData result = reportService.getChatPreview(1L, 99L, null, 2);
+        ReportChatPreviewData result = reportService.getChatPreview(1L, "TEACHER", 99L, null, 2);
 
         assertThat(result.messages()).extracting("content")
                 .containsExactly("  parent message  ", "   ");

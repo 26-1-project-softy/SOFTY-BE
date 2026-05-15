@@ -47,15 +47,15 @@ public class ReportService {
     private final ReportS3StorageService reportS3StorageService;
 
     @Transactional(readOnly = true)
-    public ReportChatRoomListData getChatRoomsForReport(Long userId, int page, int size) {
+    public ReportChatRoomListData getChatRoomsForReport(Long userId, String activeRole, int page, int size) {
         if (page < 0) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "page는 0 이상이어야 합니다");
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "page는 0 이상이어야 합니다.");
         }
         if (size < 1 || size > MAX_PAGE_SIZE) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "size는 1~100 사이여야 합니다");
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "size는 1~100 사이여야 합니다.");
         }
 
-        getTeacherOrThrow(userId);
+        getTeacherOrThrow(userId, activeRole);
 
         Page<ReportChatRoomRow> result = chatRoomRepository.findReportChatRoomsByTeacherId(
                 userId,
@@ -82,7 +82,7 @@ public class ReportService {
     }
 
     @Transactional(readOnly = true)
-    public ReportChatPreviewData getChatPreview(Long userId, Long chatRoomId, Long cursor, int size) {
+    public ReportChatPreviewData getChatPreview(Long userId, String activeRole, Long chatRoomId, Long cursor, int size) {
         if (chatRoomId == null || chatRoomId <= 0) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "유효하지 않은 채팅방 ID입니다.");
         }
@@ -93,7 +93,7 @@ public class ReportService {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "유효하지 않은 커서입니다.");
         }
 
-        getTeacherOrThrow(userId);
+        getTeacherOrThrow(userId, activeRole);
 
         chatRoomRepository.findById(chatRoomId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "채팅방을 찾을 수 없습니다."));
@@ -128,25 +128,15 @@ public class ReportService {
         );
     }
 
-    private User getTeacherOrThrow(Long userId) {
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "사용자를 찾을 수 없습니다"));
-
-        if (!ROLE_TEACHER.equalsIgnoreCase(user.getRole())) {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "교사 계정만 증빙 리포트를 조회할 수 있습니다");
-        }
-        return user;
-    }
-
     @Transactional
-    public ReportPdfCreateData createPdf(Long userId, Long chatRoomId) {
-        User teacher = getTeacherOrThrow(userId);
+    public ReportPdfCreateData createPdf(Long userId, String activeRole, Long chatRoomId) {
+        User teacher = getTeacherOrThrow(userId, activeRole);
         ChatRoom chatRoom = chatRoomRepository.findById(chatRoomId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "채팅방을 찾을 수 없습니다"));
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "채팅방을 찾을 수 없습니다."));
 
         boolean hasAccess = chatRoomRepository.existsParticipantByChatRoomIdAndUserId(chatRoomId, userId);
         if (!hasAccess) {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "해당 채팅방에 접근할 권한이 없습니다.");
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "해당 채팅방에 접근 권한이 없습니다.");
         }
 
         List<Message> messages = messageRepository.findAllByChatRoomIdForReport(chatRoomId);
@@ -168,6 +158,19 @@ public class ReportService {
                 downloadUrl,
                 reportS3StorageService.getPresignedExpireSeconds()
         );
+    }
+
+    private User getTeacherOrThrow(Long userId, String activeRole) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "사용자를 찾을 수 없습니다."));
+
+        if (!ROLE_TEACHER.equalsIgnoreCase(activeRole)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "교사 세션에서만 리포트를 조회할 수 있습니다.");
+        }
+        if (!user.hasRole(ROLE_TEACHER)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "교사 역할이 없는 계정입니다.");
+        }
+        return user;
     }
 
     private String nullToEmpty(String value) {
