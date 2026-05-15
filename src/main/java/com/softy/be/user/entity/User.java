@@ -88,13 +88,6 @@ public class User extends BaseEntity {
                 .anyMatch(userRole -> normalizedRole.equals(userRole.getRole()));
     }
 
-    public String getRole() {
-        return userRoles.stream()
-                .map(UserRole::getRole)
-                .findFirst()
-                .orElse(ROLE_UNASSIGNED);
-    }
-
     public void addRole(String role) {
         String normalizedRole = normalizeRole(role);
         if (userRoles.stream().noneMatch(userRole -> normalizedRole.equals(userRole.getRole()))) {
