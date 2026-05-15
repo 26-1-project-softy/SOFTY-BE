@@ -34,7 +34,7 @@ public class AdminAuthService {
         User user = userRepository.findByLoginId(request.loginId().trim())
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "로그인 정보가 올바르지 않습니다."));
 
-        if (!ADMIN_ROLE.equalsIgnoreCase(user.getRole())) {
+        if (!user.hasRole(ADMIN_ROLE)) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "관리자 계정만 로그인할 수 있습니다.");
         }
 
@@ -62,7 +62,7 @@ public class AdminAuthService {
         User admin = User.createAdmin(request.name().trim(), loginId, encodedPassword);
         User saved = userRepository.save(admin);
 
-        return new AdminRegisterResult(saved.getId(), saved.getRole(), saved.getLoginId());
+        return new AdminRegisterResult(saved.getId(), ADMIN_ROLE, saved.getLoginId());
     }
 
     private void validateLoginRequest(AdminLoginRequest request) {

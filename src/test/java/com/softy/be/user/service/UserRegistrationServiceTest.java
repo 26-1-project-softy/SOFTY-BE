@@ -42,7 +42,7 @@ class UserRegistrationServiceTest {
         Classroom classroom = classroomRepository.findFirstByTeacherIdOrderByIdDesc(savedUser.getId()).orElseThrow();
 
         assertThat(signupResult.role()).isEqualTo("TEACHER");
-        assertThat(reloadedUser.getRole()).isEqualTo("TEACHER");
+        assertThat(reloadedUser.hasRole("TEACHER")).isTrue();
         assertThat(reloadedUser.getName()).isEqualTo("teacher_name");
         assertThat(classCodeRepository.findFirstByClassroomIdAndIsActiveTrueOrderByIdDesc(classroom.getId())).isEmpty();
     }
