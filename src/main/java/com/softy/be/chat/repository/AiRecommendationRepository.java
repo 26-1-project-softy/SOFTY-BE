@@ -13,7 +13,8 @@ public interface AiRecommendationRepository extends JpaRepository<AiRecommendati
             FROM AiRecommendation ar
             JOIN ar.message m
             JOIN m.sender s
-            WHERE UPPER(s.role) = 'TEACHER'
+            JOIN s.userRoles ur
+            WHERE UPPER(ur.role) = 'TEACHER'
               AND ar.content IS NOT NULL
             """)
     long countTeacherRecommendations();

@@ -45,7 +45,8 @@ public interface MessageRepository extends JpaRepository<Message, Long> {
             SELECT COUNT(m)
             FROM Message m
             JOIN m.sender s
-            WHERE UPPER(s.role) = 'TEACHER'
+            JOIN s.userRoles ur
+            WHERE UPPER(ur.role) = 'TEACHER'
             """)
     long countTeacherMessages();
 
@@ -53,7 +54,8 @@ public interface MessageRepository extends JpaRepository<Message, Long> {
             SELECT COUNT(m)
             FROM Message m
             JOIN m.sender s
-            WHERE UPPER(s.role) = 'TEACHER'
+            JOIN s.userRoles ur
+            WHERE UPPER(ur.role) = 'TEACHER'
               AND m.isDisputeRisk = true
             """)
     long countTeacherDisputeRiskMessages();
