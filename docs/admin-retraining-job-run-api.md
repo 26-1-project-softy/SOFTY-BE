@@ -35,6 +35,7 @@ Content-Type: application/json
 - BE는 AI 서버 응답 중 프론트 화면에 필요한 값만 추려서 반환한다
   - `jobId`
   - `status`
+  - `progressPercent`
 - `status`는 AI 서버 응답 값을 대문자 형식으로 정규화해 반환한다
   - 예: `queued` -> `QUEUED`
 - AI 서버 응답이 비어 있거나 파싱할 수 없으면 `502 Bad Gateway`를 반환한다
@@ -49,7 +50,8 @@ Content-Type: application/json
   "message": "재학습 요청에 성공했습니다.",
   "data": {
     "jobId": "retrain_20260326_001",
-    "status": "QUEUED"
+    "status": "QUEUED",
+    "progressPercent": 15
   }
 }
 ```
@@ -60,10 +62,12 @@ Content-Type: application/json
 - `message`: 처리 결과 메시지
 - `data.jobId`: 생성된 재학습 작업 ID
 - `data.status`: 재학습 작업 상태
+- `data.progressPercent`: 재학습 진행률 퍼센트 값
 
 ## AI 서버 응답 매핑
 - `job_id` -> `jobId`
 - `status` -> `status`
+- `progress_percent` -> `progressPercent`
 
 ## 오류 응답
 - `401 Unauthorized`

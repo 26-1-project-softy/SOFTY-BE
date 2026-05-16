@@ -94,12 +94,13 @@ class AdminModelServiceTest {
     @Test
     void requestRiskDetectionRetrainingReturnsJobIdAndNormalizedStatus() {
         when(aiRetrainingJobClient.requestRiskDetectionRetraining()).thenReturn(
-                new AiRetrainingJobClient.AiRetrainingJobResult("retrain_20260326_001", "queued")
+                new AiRetrainingJobClient.AiRetrainingJobResult("retrain_20260326_001", "queued", 15)
         );
 
         var result = adminModelService.requestRiskDetectionRetraining();
 
         assertThat(result.jobId()).isEqualTo("retrain_20260326_001");
         assertThat(result.status()).isEqualTo("QUEUED");
+        assertThat(result.progressPercent()).isEqualTo(15);
     }
 }
