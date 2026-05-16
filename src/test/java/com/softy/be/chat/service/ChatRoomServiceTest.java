@@ -323,6 +323,37 @@ class ChatRoomServiceTest {
     }
 
     @Test
+    void sendChatRoomMessageRejectsCompletedChatRoom() {
+        User parent = User.createForKakao("parent");
+        parent.completeParentSignup("parent");
+        ReflectionTestUtils.setField(parent, "id", 2L);
+
+        User teacher = User.createForKakao("teacher");
+        teacher.completeTeacherSignup("teacher");
+        ReflectionTestUtils.setField(teacher, "id", 1L);
+
+        ChatRoom chatRoom = ChatRoom.create("CONSULT", ChatRoomStatus.COMPLETED);
+        ReflectionTestUtils.setField(chatRoom, "id", 15L);
+
+        ChatRoomUserMap parentMapping = ChatRoomUserMap.create(chatRoom, parent, ROLE_PARENT, 0, null);
+        ChatRoomUserMap teacherMapping = ChatRoomUserMap.create(chatRoom, teacher, ROLE_TEACHER, 0, null);
+
+        when(userRepository.findById(2L)).thenReturn(Optional.of(parent));
+        when(chatRoomRepository.findById(15L)).thenReturn(Optional.of(chatRoom));
+        when(chatRoomUserMapRepository.findAllByChatRoomId(15L)).thenReturn(List.of(parentMapping, teacherMapping));
+
+        assertThatThrownBy(() -> chatRoomService.sendChatRoomMessage(
+                2L,
+                ROLE_PARENT,
+                15L,
+                new ChatRoomMessageSendRequest("message")
+        ))
+                .isInstanceOf(ResponseStatusException.class)
+                .satisfies(exception -> assertThat(((ResponseStatusException) exception).getStatusCode())
+                        .isEqualTo(HttpStatus.FORBIDDEN));
+    }
+
+    @Test
     void sendTeacherMessagePreservesLeadingAndTrailingWhitespace() {
         User teacher = User.createForKakao("teacher");
         teacher.completeTeacherSignup("teacher");
@@ -393,6 +424,33 @@ class ChatRoomServiceTest {
         AiRecommendation savedRecommendation = recommendationCaptor.getValue();
         assertThat(ReflectionTestUtils.getField(savedRecommendation, "content")).isEqualTo("recommendation");
         assertThat(ReflectionTestUtils.getField(savedRecommendation, "isRecommendationUsed")).isEqualTo(true);
+    }
+
+    @Test
+    void sendTeacherMessageRejectsCompletedChatRoom() {
+        User teacher = User.createForKakao("teacher");
+        teacher.completeTeacherSignup("teacher");
+        ReflectionTestUtils.setField(teacher, "id", 1L);
+
+        ChatRoom chatRoom = ChatRoom.create("CONSULT", ChatRoomStatus.COMPLETED);
+        ReflectionTestUtils.setField(chatRoom, "id", 15L);
+
+        ChatRoomUserMap teacherMapping = ChatRoomUserMap.create(chatRoom, teacher, ROLE_TEACHER, 0, null);
+
+        when(userRepository.findById(1L)).thenReturn(Optional.of(teacher));
+        when(chatRoomRepository.findById(15L)).thenReturn(Optional.of(chatRoom));
+        when(chatRoomUserMapRepository.findByChatRoomIdAndUserIdAndParticipantRole(15L, 1L, ROLE_TEACHER))
+                .thenReturn(Optional.of(teacherMapping));
+
+        assertThatThrownBy(() -> chatRoomService.sendTeacherMessage(
+                1L,
+                ROLE_TEACHER,
+                15L,
+                new TeacherMessageSendRequest(31L, "message")
+        ))
+                .isInstanceOf(ResponseStatusException.class)
+                .satisfies(exception -> assertThat(((ResponseStatusException) exception).getStatusCode())
+                        .isEqualTo(HttpStatus.FORBIDDEN));
     }
 
     @Test

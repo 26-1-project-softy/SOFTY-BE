@@ -237,6 +237,7 @@ public class ChatRoomService {
 
         User teacher = getTeacherUser(userId, activeRole);
         ChatRoomUserMap senderMapping = getChatRoomParticipantMapping(chatRoomId, userId, activeRole);
+        validateChatRoomIsNotCompleted(senderMapping.getChatRoom());
         MessageAnalysis analysis = messageAnalysisRepository.findById(request.analysisId())
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "메시지 분석 결과를 찾을 수 없습니다."));
 
@@ -309,6 +310,8 @@ public class ChatRoomService {
                 .filter(mapping -> !mapping.getUser().getId().equals(userId))
                 .findFirst()
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "메시지를 받을 상대방을 찾을 수 없습니다."));
+
+        validateChatRoomIsNotCompleted(senderMapping.getChatRoom());
 
         LocalDateTime now = LocalDateTime.now();
         senderMapping.markAsRead(now);
@@ -655,6 +658,12 @@ public class ChatRoomService {
 
     private boolean isBlank(String value) {
         return value == null || value.trim().isEmpty();
+    }
+
+    private void validateChatRoomIsNotCompleted(ChatRoom chatRoom) {
+        if (chatRoom != null && chatRoom.getStatus() == ChatRoomStatus.COMPLETED) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "완료된 채팅방에는 더 이상 메시지를 전송할 수 없습니다.");
+        }
     }
 
     private boolean isUnreadByCounterpart(Message message, Long userId, LocalDateTime counterpartLastReadAt) {
