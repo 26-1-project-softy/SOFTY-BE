@@ -113,7 +113,7 @@
 ### `pdf_file`
 - PK: `id`
 - FK: `chat_room_id -> chat_room.id` (`NOT NULL`)
-- FK: `teacher_id -> users.id` (`NOT NULL`)
+- FK: `created_by -> users.id` (`NOT NULL`)
 - 컬럼: `file_url`, `file_name`
 
 ### `ai_feedback`

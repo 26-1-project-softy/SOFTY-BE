@@ -175,13 +175,13 @@ CREATE TABLE ai_recommendation (
 CREATE TABLE pdf_file (
     id BIGSERIAL PRIMARY KEY,
     chat_room_id BIGINT NOT NULL,
-    teacher_id BIGINT NOT NULL,
+    created_by BIGINT NOT NULL,
     file_url TEXT NOT NULL,
     file_name VARCHAR(100) NOT NULL,
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (chat_room_id) REFERENCES chat_room(id),
-    FOREIGN KEY (teacher_id) REFERENCES users(id)
+    FOREIGN KEY (created_by) REFERENCES users(id)
 );
 
 -- 15. MESSAGE_ANALYSIS
