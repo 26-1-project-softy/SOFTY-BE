@@ -17,6 +17,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 @ActiveProfiles("test")
 class UserRegistrationServiceTest {
 
+    private static final String ROLE_TEACHER = "TEACHER";
+
     @Autowired
     private UserRegistrationService userRegistrationService;
 
@@ -41,8 +43,8 @@ class UserRegistrationServiceTest {
         User reloadedUser = userRepository.findById(savedUser.getId()).orElseThrow();
         Classroom classroom = classroomRepository.findFirstByTeacherIdOrderByIdDesc(savedUser.getId()).orElseThrow();
 
-        assertThat(signupResult.role()).isEqualTo("TEACHER");
-        assertThat(reloadedUser.hasRole("TEACHER")).isTrue();
+        assertThat(signupResult.role()).isEqualTo(ROLE_TEACHER);
+        assertThat(reloadedUser.hasRole(ROLE_TEACHER)).isTrue();
         assertThat(reloadedUser.getName()).isEqualTo("teacher_name");
         assertThat(classCodeRepository.findFirstByClassroomIdAndIsActiveTrueOrderByIdDesc(classroom.getId())).isEmpty();
     }
@@ -57,7 +59,7 @@ class UserRegistrationServiceTest {
         );
 
         Classroom classroom = classroomRepository.findFirstByTeacherIdOrderByIdDesc(savedUser.getId()).orElseThrow();
-        ClassCodeCreateResult classCodeResult = userRegistrationService.createTeacherClassCode(savedUser.getId(), "TEACHER");
+        ClassCodeCreateResult classCodeResult = userRegistrationService.createTeacherClassCode(savedUser.getId(), ROLE_TEACHER);
 
         assertThat(classCodeResult.classCode()).isNotBlank();
         assertThat(classCodeRepository.findFirstByClassroomIdAndIsActiveTrueOrderByIdDesc(classroom.getId()))
