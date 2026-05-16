@@ -103,7 +103,7 @@ class ChatRoomServiceTest {
 
         when(userRepository.findById(1L)).thenReturn(Optional.of(teacher));
         when(chatRoomRepository.findById(15L)).thenReturn(Optional.of(chatRoom));
-        when(chatRoomUserMapRepository.findByChatRoomIdAndUserId(15L, 1L)).thenReturn(Optional.of(mapping));
+        when(chatRoomUserMapRepository.findByChatRoomIdAndUserIdAndParticipantRole(15L, 1L, ROLE_TEACHER)).thenReturn(Optional.of(mapping));
 
         ChatRoomStatusUpdateData result = chatRoomService.updateChatRoomStatus(
                 1L,
@@ -117,7 +117,7 @@ class ChatRoomServiceTest {
         assertThat(chatRoom.getStatus()).isEqualTo(ChatRoomStatus.COMPLETED);
 
         verify(chatRoomRepository).findById(15L);
-        verify(chatRoomUserMapRepository).findByChatRoomIdAndUserId(15L, 1L);
+        verify(chatRoomUserMapRepository).findByChatRoomIdAndUserIdAndParticipantRole(15L, 1L, ROLE_TEACHER);
     }
 
     @Test
@@ -137,6 +137,32 @@ class ChatRoomServiceTest {
                         .isEqualTo(HttpStatus.FORBIDDEN));
 
         verifyNoInteractions(chatRoomRepository, chatRoomUserMapRepository);
+    }
+
+    @Test
+    void updateChatRoomStatusRejectsTeacherSessionWithoutTeacherParticipantMapping() {
+        User multiRoleUser = User.createForKakao("teacher-parent");
+        multiRoleUser.completeTeacherSignup("teacher-parent");
+        multiRoleUser.completeParentSignup("teacher-parent");
+        ReflectionTestUtils.setField(multiRoleUser, "id", 1L);
+
+        ChatRoom chatRoom = ChatRoom.create("CONSULT", ChatRoomStatus.IN_PROGRESS);
+        ReflectionTestUtils.setField(chatRoom, "id", 15L);
+
+        when(userRepository.findById(1L)).thenReturn(Optional.of(multiRoleUser));
+        when(chatRoomRepository.findById(15L)).thenReturn(Optional.of(chatRoom));
+        when(chatRoomUserMapRepository.findByChatRoomIdAndUserIdAndParticipantRole(15L, 1L, ROLE_TEACHER))
+                .thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> chatRoomService.updateChatRoomStatus(
+                1L,
+                ROLE_TEACHER,
+                15L,
+                new ChatRoomStatusUpdateRequest(ChatRoomStatus.COMPLETED)
+        ))
+                .isInstanceOf(ResponseStatusException.class)
+                .satisfies(exception -> assertThat(((ResponseStatusException) exception).getStatusCode())
+                        .isEqualTo(HttpStatus.FORBIDDEN));
     }
 
     @Test
@@ -186,7 +212,7 @@ class ChatRoomServiceTest {
 
         when(userRepository.findById(1L)).thenReturn(Optional.of(teacher));
         when(chatRoomRepository.findById(15L)).thenReturn(Optional.of(chatRoom));
-        when(chatRoomRepository.existsParticipantByChatRoomIdAndUserId(15L, 1L)).thenReturn(true);
+        when(chatRoomRepository.existsParticipantByChatRoomIdAndUserIdAndParticipantRole(15L, 1L, ROLE_TEACHER)).thenReturn(true);
         when(chatRoomUserMapRepository.findAllByChatRoomId(15L)).thenReturn(List.of(teacherMapping, parentMapping));
         when(messageRepository.findPreviewMessages(eq(15L), eq(null), any())).thenReturn(List.of(latestTeacherMessage, olderTeacherMessage, parentMessage));
         when(messageRepository.existsOlderMessage(15L, 101L)).thenReturn(false);
@@ -230,7 +256,7 @@ class ChatRoomServiceTest {
 
         when(userRepository.findById(1L)).thenReturn(Optional.of(teacher));
         when(chatRoomRepository.findById(15L)).thenReturn(Optional.of(chatRoom));
-        when(chatRoomRepository.existsParticipantByChatRoomIdAndUserId(15L, 1L)).thenReturn(true);
+        when(chatRoomRepository.existsParticipantByChatRoomIdAndUserIdAndParticipantRole(15L, 1L, ROLE_TEACHER)).thenReturn(true);
         when(chatRoomUserMapRepository.findAllByChatRoomId(15L)).thenReturn(List.of(teacherMapping, parentMapping));
         when(messageRepository.findPreviewMessages(eq(15L), eq(null), any())).thenReturn(List.of(teacherMessage, parentMessage));
         when(messageRepository.existsOlderMessage(15L, 101L)).thenReturn(false);
@@ -319,7 +345,7 @@ class ChatRoomServiceTest {
 
         when(userRepository.findById(1L)).thenReturn(Optional.of(teacher));
         when(chatRoomRepository.findById(15L)).thenReturn(Optional.of(chatRoom));
-        when(chatRoomUserMapRepository.findByChatRoomIdAndUserId(15L, 1L)).thenReturn(Optional.of(teacherMapping));
+        when(chatRoomUserMapRepository.findByChatRoomIdAndUserIdAndParticipantRole(15L, 1L, ROLE_TEACHER)).thenReturn(Optional.of(teacherMapping));
         when(chatRoomUserMapRepository.findAllByChatRoomId(15L)).thenReturn(List.of(teacherMapping));
         when(messageAnalysisRepository.findById(30L)).thenReturn(Optional.of(analysis));
         when(messageRepository.save(any(Message.class))).thenAnswer(invocation -> invocation.getArgument(0));
@@ -354,7 +380,7 @@ class ChatRoomServiceTest {
 
         when(userRepository.findById(1L)).thenReturn(Optional.of(teacher));
         when(chatRoomRepository.findById(15L)).thenReturn(Optional.of(chatRoom));
-        when(chatRoomUserMapRepository.findByChatRoomIdAndUserId(15L, 1L)).thenReturn(Optional.of(teacherMapping));
+        when(chatRoomUserMapRepository.findByChatRoomIdAndUserIdAndParticipantRole(15L, 1L, ROLE_TEACHER)).thenReturn(Optional.of(teacherMapping));
         when(chatRoomUserMapRepository.findAllByChatRoomId(15L)).thenReturn(List.of(teacherMapping));
         when(messageAnalysisRepository.findById(31L)).thenReturn(Optional.of(analysis));
         when(messageRepository.save(any(Message.class))).thenAnswer(invocation -> invocation.getArgument(0));
@@ -420,7 +446,7 @@ class ChatRoomServiceTest {
 
         when(userRepository.findById(1L)).thenReturn(Optional.of(teacher));
         when(chatRoomRepository.findById(15L)).thenReturn(Optional.of(chatRoom));
-        when(chatRoomRepository.existsParticipantByChatRoomIdAndUserId(15L, 1L)).thenReturn(true);
+        when(chatRoomRepository.existsParticipantByChatRoomIdAndUserIdAndParticipantRole(15L, 1L, ROLE_TEACHER)).thenReturn(true);
         when(chatRoomUserMapRepository.findAllByChatRoomId(15L)).thenReturn(List.of(teacherMapping, parentMapping));
         when(messageRepository.findPreviewMessages(eq(15L), eq(null), any())).thenReturn(List.of(teacherMessage, parentMessage));
         when(messageRepository.existsOlderMessage(15L, 101L)).thenReturn(false);
@@ -429,5 +455,26 @@ class ChatRoomServiceTest {
 
         assertThat(result.messages()).extracting("content")
                 .containsExactly("  parent message  ", "  reviewed message  ");
+    }
+
+    @Test
+    void getChatRoomMessagesRejectsTeacherSessionWithoutTeacherParticipantMapping() {
+        User multiRoleUser = User.createForKakao("teacher-parent");
+        multiRoleUser.completeTeacherSignup("teacher-parent");
+        multiRoleUser.completeParentSignup("teacher-parent");
+        ReflectionTestUtils.setField(multiRoleUser, "id", 1L);
+
+        ChatRoom chatRoom = ChatRoom.create("CONSULT", ChatRoomStatus.IN_PROGRESS);
+        ReflectionTestUtils.setField(chatRoom, "id", 15L);
+
+        when(userRepository.findById(1L)).thenReturn(Optional.of(multiRoleUser));
+        when(chatRoomRepository.findById(15L)).thenReturn(Optional.of(chatRoom));
+        when(chatRoomRepository.existsParticipantByChatRoomIdAndUserIdAndParticipantRole(15L, 1L, ROLE_TEACHER))
+                .thenReturn(false);
+
+        assertThatThrownBy(() -> chatRoomService.getChatRoomMessages(1L, ROLE_TEACHER, 15L, null, 30))
+                .isInstanceOf(ResponseStatusException.class)
+                .satisfies(exception -> assertThat(((ResponseStatusException) exception).getStatusCode())
+                        .isEqualTo(HttpStatus.FORBIDDEN));
     }
 }

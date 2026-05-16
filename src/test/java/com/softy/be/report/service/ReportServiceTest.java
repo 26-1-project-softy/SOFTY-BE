@@ -66,14 +66,14 @@ class ReportServiceTest {
 
         when(userRepository.findById(1L)).thenReturn(Optional.of(teacher));
         when(chatRoomRepository.findById(99L)).thenReturn(Optional.of(chatRoom));
-        when(chatRoomRepository.existsParticipantByChatRoomIdAndUserId(99L, 1L)).thenReturn(false);
+        when(chatRoomRepository.existsParticipantByChatRoomIdAndUserIdAndParticipantRole(99L, 1L, ROLE_TEACHER)).thenReturn(false);
 
         assertThatThrownBy(() -> reportService.createPdf(1L, ROLE_TEACHER, 99L))
                 .isInstanceOf(ResponseStatusException.class)
                 .satisfies(exception -> assertThat(((ResponseStatusException) exception).getStatusCode())
                         .isEqualTo(HttpStatus.FORBIDDEN));
 
-        verify(chatRoomRepository).existsParticipantByChatRoomIdAndUserId(99L, 1L);
+        verify(chatRoomRepository).existsParticipantByChatRoomIdAndUserIdAndParticipantRole(99L, 1L, ROLE_TEACHER);
         verifyNoInteractions(messageRepository, reportPdfRenderService, reportS3StorageService, pdfFileRepository);
     }
 
@@ -100,7 +100,7 @@ class ReportServiceTest {
 
         when(userRepository.findById(1L)).thenReturn(Optional.of(teacher));
         when(chatRoomRepository.findById(99L)).thenReturn(Optional.of(chatRoom));
-        when(chatRoomRepository.existsParticipantByChatRoomIdAndUserId(99L, 1L)).thenReturn(true);
+        when(chatRoomRepository.existsParticipantByChatRoomIdAndUserIdAndParticipantRole(99L, 1L, ROLE_TEACHER)).thenReturn(true);
         when(messageRepository.findPreviewMessages(org.mockito.ArgumentMatchers.eq(99L), org.mockito.ArgumentMatchers.eq(null), any()))
                 .thenReturn(List.of(teacherMessage, parentMessage));
         when(messageRepository.existsOlderMessage(99L, 101L)).thenReturn(false);
@@ -109,5 +109,26 @@ class ReportServiceTest {
 
         assertThat(result.messages()).extracting("content")
                 .containsExactly("  parent message  ", "   ");
+    }
+
+    @Test
+    void getChatPreviewRejectsTeacherSessionWithoutTeacherParticipantMapping() {
+        User multiRoleUser = User.createForKakao("teacher-parent");
+        multiRoleUser.completeTeacherSignup("teacher-parent");
+        multiRoleUser.completeParentSignup("teacher-parent");
+        ReflectionTestUtils.setField(multiRoleUser, "id", 1L);
+
+        ChatRoom chatRoom = ChatRoom.create("CONSULT", ChatRoomStatus.IN_PROGRESS);
+        ReflectionTestUtils.setField(chatRoom, "id", 99L);
+
+        when(userRepository.findById(1L)).thenReturn(Optional.of(multiRoleUser));
+        when(chatRoomRepository.findById(99L)).thenReturn(Optional.of(chatRoom));
+        when(chatRoomRepository.existsParticipantByChatRoomIdAndUserIdAndParticipantRole(99L, 1L, ROLE_TEACHER))
+                .thenReturn(false);
+
+        assertThatThrownBy(() -> reportService.getChatPreview(1L, ROLE_TEACHER, 99L, null, 30))
+                .isInstanceOf(ResponseStatusException.class)
+                .satisfies(exception -> assertThat(((ResponseStatusException) exception).getStatusCode())
+                        .isEqualTo(HttpStatus.FORBIDDEN));
     }
 }

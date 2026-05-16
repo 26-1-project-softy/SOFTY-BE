@@ -51,6 +51,7 @@ public interface ChatRoomRepository extends JpaRepository<ChatRoom, Long> {
                     JOIN chat_room_user_map my_map
                       ON my_map.chat_room_id = cr.id
                      AND my_map.user_id = :teacherId
+                     AND my_map.participant_role = 'TEACHER'
                     WHERE cr.id = :chatRoomId
                     """,
             nativeQuery = true
@@ -93,6 +94,7 @@ public interface ChatRoomRepository extends JpaRepository<ChatRoom, Long> {
                     JOIN chat_room_user_map my_map
                       ON my_map.chat_room_id = cr.id
                      AND my_map.user_id = :parentId
+                     AND my_map.participant_role = 'PARENT'
                     WHERE cr.id = :chatRoomId
                     """,
             nativeQuery = true
@@ -175,6 +177,7 @@ public interface ChatRoomRepository extends JpaRepository<ChatRoom, Long> {
                     JOIN chat_room_user_map my_map
                       ON my_map.chat_room_id = cr.id
                      AND my_map.user_id = :teacherId
+                     AND my_map.participant_role = 'TEACHER'
                     LEFT JOIN latest_message lm ON lm.chat_room_id = cr.id
                     WHERE :cursor IS NULL
                        OR (
@@ -262,6 +265,7 @@ public interface ChatRoomRepository extends JpaRepository<ChatRoom, Long> {
                     JOIN chat_room_user_map my_map
                       ON my_map.chat_room_id = cr.id
                      AND my_map.user_id = :parentId
+                     AND my_map.participant_role = 'PARENT'
                     LEFT JOIN latest_message lm ON lm.chat_room_id = cr.id
                     WHERE :cursor IS NULL
                        OR (
@@ -295,6 +299,24 @@ public interface ChatRoomRepository extends JpaRepository<ChatRoom, Long> {
             nativeQuery = true
     )
     boolean existsParticipantByChatRoomIdAndUserId(@Param("chatRoomId") Long chatRoomId, @Param("userId") Long userId);
+
+    @Query(
+            value = """
+                    SELECT EXISTS (
+                        SELECT 1
+                        FROM chat_room_user_map crm
+                        WHERE crm.chat_room_id = :chatRoomId
+                          AND crm.user_id = :userId
+                          AND UPPER(crm.participant_role) = UPPER(:participantRole)
+                    )
+                    """,
+            nativeQuery = true
+    )
+    boolean existsParticipantByChatRoomIdAndUserIdAndParticipantRole(
+            @Param("chatRoomId") Long chatRoomId,
+            @Param("userId") Long userId,
+            @Param("participantRole") String participantRole
+    );
 
     @Query(
             value = """
@@ -336,6 +358,7 @@ public interface ChatRoomRepository extends JpaRepository<ChatRoom, Long> {
                         FROM chat_room_user_map crm
                         WHERE crm.chat_room_id = cr.id
                           AND crm.user_id = :teacherId
+                          AND crm.participant_role = 'TEACHER'
                     )
                     ORDER BY
                         COALESCE(
@@ -352,6 +375,7 @@ public interface ChatRoomRepository extends JpaRepository<ChatRoom, Long> {
                         FROM chat_room_user_map crm
                         WHERE crm.chat_room_id = cr.id
                           AND crm.user_id = :teacherId
+                          AND crm.participant_role = 'TEACHER'
                     )
                     """,
             nativeQuery = true

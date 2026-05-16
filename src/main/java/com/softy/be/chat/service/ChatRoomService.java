@@ -94,7 +94,7 @@ public class ChatRoomService {
         chatRoomRepository.findById(chatRoomId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "채팅방을 찾을 수 없습니다."));
 
-        boolean hasAccess = chatRoomRepository.existsParticipantByChatRoomIdAndUserId(chatRoomId, userId);
+        boolean hasAccess = chatRoomRepository.existsParticipantByChatRoomIdAndUserIdAndParticipantRole(chatRoomId, userId, activeRole);
         if (!hasAccess) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "해당 채팅방에 접근할 권한이 없습니다.");
         }
@@ -129,7 +129,7 @@ public class ChatRoomService {
         validateChatRoomStatusUpdateRequest(request);
 
         getTeacherUser(userId, activeRole);
-        ChatRoomUserMap mapping = getChatRoomParticipantMapping(chatRoomId, userId);
+        ChatRoomUserMap mapping = getChatRoomParticipantMapping(chatRoomId, userId, activeRole);
         ChatRoom chatRoom = mapping.getChatRoom();
         chatRoom.updateStatus(request.status());
 
@@ -149,7 +149,7 @@ public class ChatRoomService {
         validateTeacherMessageAnalyzeRequest(request);
 
         User teacher = getTeacherUser(userId, activeRole);
-        ChatRoomUserMap mapping = getChatRoomParticipantMapping(chatRoomId, userId);
+        ChatRoomUserMap mapping = getChatRoomParticipantMapping(chatRoomId, userId, activeRole);
         return analyzeTeacherMessageContent(teacher, mapping.getChatRoom(), request.content());
     }
 
@@ -236,7 +236,7 @@ public class ChatRoomService {
         validateTeacherMessageSendRequest(request);
 
         User teacher = getTeacherUser(userId, activeRole);
-        ChatRoomUserMap senderMapping = getChatRoomParticipantMapping(chatRoomId, userId);
+        ChatRoomUserMap senderMapping = getChatRoomParticipantMapping(chatRoomId, userId, activeRole);
         MessageAnalysis analysis = messageAnalysisRepository.findById(request.analysisId())
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "메시지 분석 결과를 찾을 수 없습니다."));
 
@@ -301,6 +301,7 @@ public class ChatRoomService {
         List<ChatRoomUserMap> mappings = chatRoomUserMapRepository.findAllByChatRoomId(chatRoomId);
         ChatRoomUserMap senderMapping = mappings.stream()
                 .filter(mapping -> mapping.getUser().getId().equals(userId))
+                .filter(mapping -> ROLE_PARENT.equalsIgnoreCase(mapping.getParticipantRole()))
                 .findFirst()
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.FORBIDDEN, "해당 채팅방에 접근할 권한이 없습니다."));
 
@@ -339,8 +340,7 @@ public class ChatRoomService {
         chatRoomRepository.findById(chatRoomId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "채팅방을 찾을 수 없습니다."));
 
-        ChatRoomUserMap mapping = chatRoomUserMapRepository.findByChatRoomIdAndUserId(chatRoomId, userId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.FORBIDDEN, "해당 채팅방에 접근할 권한이 없습니다."));
+        ChatRoomUserMap mapping = getChatRoomParticipantMapping(chatRoomId, userId, activeRole);
 
         LocalDateTime now = LocalDateTime.now();
         mapping.markAsRead(now);
@@ -375,7 +375,7 @@ public class ChatRoomService {
         chatRoomRepository.findById(chatRoomId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "채팅방을 찾을 수 없습니다."));
 
-        boolean hasAccess = chatRoomRepository.existsParticipantByChatRoomIdAndUserId(chatRoomId, userId);
+        boolean hasAccess = chatRoomRepository.existsParticipantByChatRoomIdAndUserIdAndParticipantRole(chatRoomId, userId, activeRole);
         if (!hasAccess) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "해당 채팅방에 접근할 권한이 없습니다.");
         }
@@ -548,11 +548,11 @@ public class ChatRoomService {
         }
     }
 
-    private ChatRoomUserMap getChatRoomParticipantMapping(Long chatRoomId, Long userId) {
+    private ChatRoomUserMap getChatRoomParticipantMapping(Long chatRoomId, Long userId, String activeRole) {
         chatRoomRepository.findById(chatRoomId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "채팅방을 찾을 수 없습니다."));
 
-        return chatRoomUserMapRepository.findByChatRoomIdAndUserId(chatRoomId, userId)
+        return chatRoomUserMapRepository.findByChatRoomIdAndUserIdAndParticipantRole(chatRoomId, userId, activeRole)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.FORBIDDEN, "해당 채팅방에 접근할 권한이 없습니다."));
     }
 

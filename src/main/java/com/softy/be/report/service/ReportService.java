@@ -98,7 +98,7 @@ public class ReportService {
         chatRoomRepository.findById(chatRoomId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "채팅방을 찾을 수 없습니다."));
 
-        boolean hasAccess = chatRoomRepository.existsParticipantByChatRoomIdAndUserId(chatRoomId, userId);
+        boolean hasAccess = chatRoomRepository.existsParticipantByChatRoomIdAndUserIdAndParticipantRole(chatRoomId, userId, activeRole);
         if (!hasAccess) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "해당 채팅방에 접근 권한이 없습니다.");
         }
@@ -134,7 +134,7 @@ public class ReportService {
         ChatRoom chatRoom = chatRoomRepository.findById(chatRoomId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "채팅방을 찾을 수 없습니다."));
 
-        boolean hasAccess = chatRoomRepository.existsParticipantByChatRoomIdAndUserId(chatRoomId, userId);
+        boolean hasAccess = chatRoomRepository.existsParticipantByChatRoomIdAndUserIdAndParticipantRole(chatRoomId, userId, activeRole);
         if (!hasAccess) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "해당 채팅방에 접근 권한이 없습니다.");
         }
