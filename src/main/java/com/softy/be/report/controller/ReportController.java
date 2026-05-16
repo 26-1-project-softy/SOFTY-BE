@@ -29,7 +29,7 @@ public class ReportController {
     @GetMapping("/chat-rooms")
     @Operation(
             summary = "리포트용 채팅방 목록 조회",
-            description = "리포트 생성에 사용할 수 있는 채팅방 목록을 페이지 단위(페이지 넘버)로 반환합니다."
+            description = "리포트 생성에 사용할 수 있는 채팅방 목록을 페이지 단위로 반환합니다."
     )
     public ResponseEntity<ApiResponse<ReportChatRoomListData>> getChatRooms(
             @AuthenticationPrincipal AuthenticatedUserPrincipal principal,
@@ -37,7 +37,7 @@ public class ReportController {
             @RequestParam(value = "size", defaultValue = "20") int size
     ) {
         Long userId = principal.userId();
-        ReportChatRoomListData data = reportService.getChatRoomsForReport(userId, page, size);
+        ReportChatRoomListData data = reportService.getChatRoomsForReport(userId, principal.activeRole(), page, size);
 
         ApiResponse<ReportChatRoomListData> response = ApiResponse.of(
                 true,
@@ -52,7 +52,7 @@ public class ReportController {
     @GetMapping("/chat-rooms/{chatRoomId}/preview")
     @Operation(
             summary = "채팅 미리보기 조회",
-            description = "리포트 검토를 위해 채팅방 메시지 미리보기를 커서 기반(무한 스크롤)으로 반환합니다."
+            description = "리포트 검토를 위해 채팅방 메시지 미리보기를 커서 기반으로 반환합니다."
     )
     public ResponseEntity<ApiResponse<ReportChatPreviewData>> getChatPreview(
             @AuthenticationPrincipal AuthenticatedUserPrincipal principal,
@@ -61,7 +61,7 @@ public class ReportController {
             @RequestParam(value = "size", defaultValue = "30") int size
     ) {
         Long userId = principal.userId();
-        ReportChatPreviewData data = reportService.getChatPreview(userId, chatRoomId, cursor, size);
+        ReportChatPreviewData data = reportService.getChatPreview(userId, principal.activeRole(), chatRoomId, cursor, size);
 
         ApiResponse<ReportChatPreviewData> response = ApiResponse.of(
                 true,
@@ -83,7 +83,7 @@ public class ReportController {
             @PathVariable("chatRoomId") Long chatRoomId
     ) {
         Long userId = principal.userId();
-        ReportPdfCreateData data = reportService.createPdf(userId, chatRoomId);
+        ReportPdfCreateData data = reportService.createPdf(userId, principal.activeRole(), chatRoomId);
 
         ApiResponse<ReportPdfCreateData> response = ApiResponse.of(
                 true,

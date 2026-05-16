@@ -1,6 +1,7 @@
 # 교사 근무시간 상태 조회 API
 
 - 엔드포인트: `GET /chat-rooms/working-hours`
+- 현재 세션의 `activeRole`이 `PARENT`여야 함
 - 목적: 학부모에게 매핑된 교사가 현재 근무시간 이내인지 공통으로 조회
 - 부수 동작: 없음
 

@@ -35,10 +35,7 @@ public class AuthService {
         }
 
         User user = upsertKakaoUser(kakaoAccessToken.trim());
-        String accessToken = jwtService.createAccessToken(user.getId(), user.getName(), user.getRole());
-        String refreshToken = jwtService.createRefreshToken(user.getId(), user.getRole());
-        boolean registrationRequired = isRegistrationRequired(user.getRole());
-        return new KakaoLoginResult(accessToken, refreshToken, registrationRequired);
+        return createLoginResult(user, ROLE_PARENT);
     }
 
     @Transactional
@@ -51,7 +48,8 @@ public class AuthService {
         }
 
         String kakaoAccessToken = kakaoOAuthClient.exchangeCodeForAccessToken(code.trim(), redirectUri.trim());
-        return loginWithKakaoAccessToken(kakaoAccessToken);
+        User user = upsertKakaoUser(kakaoAccessToken);
+        return createLoginResult(user, ROLE_TEACHER);
     }
 
     @Transactional
@@ -70,10 +68,7 @@ public class AuthService {
         User user = socialAccount.getUser();
         user.applyDevLoginProfile(resolvedNickname, normalizedRole);
 
-        String accessToken = jwtService.createAccessToken(user.getId(), user.getName(), user.getRole());
-        String refreshToken = jwtService.createRefreshToken(user.getId(), user.getRole());
-        boolean registrationRequired = isRegistrationRequired(user.getRole());
-        return new KakaoLoginResult(accessToken, refreshToken, registrationRequired);
+        return createLoginResult(user, normalizedRole);
     }
 
     private SocialAccount createKakaoAccount(KakaoUserProfile profile) {
@@ -99,14 +94,25 @@ public class AuthService {
                 .orElseGet(() -> createKakaoAccount(profile));
 
         User user = socialAccount.getUser();
-        if (isRegistrationRequired(user.getRole()) && !Objects.equals(user.getName(), profile.nickname())) {
+        if (user.getUserRoles().isEmpty() && !Objects.equals(user.getName(), profile.nickname())) {
             user.updateName(profile.nickname());
         }
         return user;
     }
 
-    private boolean isRegistrationRequired(String role) {
-        return role == null || ROLE_UNASSIGNED.equalsIgnoreCase(role) || LEGACY_ROLE_USER.equalsIgnoreCase(role);
+    private KakaoLoginResult createLoginResult(User user, String activeRole) {
+        String resolvedActiveRole = activeRole == null ? ROLE_UNASSIGNED : activeRole;
+        String accessToken = jwtService.createAccessToken(user.getId(), user.getName(), resolvedActiveRole);
+        String refreshToken = jwtService.createRefreshToken(user.getId(), resolvedActiveRole);
+        boolean registrationRequired = isRegistrationRequiredForRole(user, resolvedActiveRole);
+        return new KakaoLoginResult(accessToken, refreshToken, registrationRequired);
+    }
+
+    private boolean isRegistrationRequiredForRole(User user, String role) {
+        if (role == null || ROLE_UNASSIGNED.equalsIgnoreCase(role) || LEGACY_ROLE_USER.equalsIgnoreCase(role)) {
+            return true;
+        }
+        return !user.hasRole(role);
     }
 
     private String normalizeRoleForDev(String role) {

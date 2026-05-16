@@ -127,7 +127,7 @@ public class AuthController {
             @AuthenticationPrincipal AuthenticatedUserPrincipal principal
     ) {
         Long userId = principal.userId();
-        ClassCodeCreateResult result = userRegistrationService.createTeacherClassCode(userId);
+        ClassCodeCreateResult result = userRegistrationService.createTeacherClassCode(userId, principal.activeRole());
 
         ApiResponse<ClassCodeData> response = ApiResponse.of(
                 true,

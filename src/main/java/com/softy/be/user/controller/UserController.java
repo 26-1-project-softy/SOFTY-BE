@@ -26,19 +26,19 @@ public class UserController {
     @GetMapping("/me")
     @Operation(
             summary = "내 정보 조회",
-            description = "인증된 사용자의 역할 및 프로필 정보를 반환합니다."
+            description = "인증된 사용자의 현재 세션 역할 기준 프로필 정보를 반환합니다."
     )
     public ResponseEntity<ApiResponse<UserMeData>> me(
             @AuthenticationPrincipal AuthenticatedUserPrincipal principal
     ) {
         Long userId = principal.userId();
-        UserMeResult result = userAccountService.getMe(userId);
+        UserMeResult result = userAccountService.getMe(userId, principal.activeRole());
 
         ApiResponse<UserMeData> response = ApiResponse.of(
                 true,
                 200,
                 "현재 사용자 정보 조회에 성공했습니다.",
-                new UserMeData(result.role(), result.name(), result.grade(), result.classNumber())
+                new UserMeData(result.activeRole(), result.name(), result.grade(), result.classNumber())
         );
 
         return ResponseEntity.ok(response);
@@ -47,7 +47,7 @@ public class UserController {
     @DeleteMapping("/me")
     @Operation(
             summary = "회원 탈퇴",
-            description = "인증된 사용자 계정과 연관 매핑 정보를 삭제합니다."
+            description = "인증된 사용자의 계정과 소셜 로그인 연결 정보를 제거합니다."
     )
     public ResponseEntity<ApiResponse<Object>> withdraw(
             @AuthenticationPrincipal AuthenticatedUserPrincipal principal

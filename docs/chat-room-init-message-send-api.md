@@ -2,6 +2,7 @@
 
 - 엔드포인트: `POST /chat-rooms/init-messages/send`
 - 목적: 학부모가 작성한 첫 문의를 최종 전송하고 새 채팅방과 첫 메시지를 생성
+- 현재 세션의 `activeRole`이 `PARENT`여야 함
 
 ## 요청
 

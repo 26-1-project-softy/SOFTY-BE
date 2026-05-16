@@ -49,7 +49,7 @@
 
 ## 집계 기준
 - 소스 테이블: `pdf_file`
-- 교사 매핑: `pdf_file.created_by` + `users(role='TEACHER')`
+- 교사 매핑: `pdf_file.created_by`와 연결된 사용자 중 `user_role.role = TEACHER`인 계정
 - 정렬: `pdfCount DESC`, `teacherName ASC`, `teacherId ASC`
 
 ## 오류 응답

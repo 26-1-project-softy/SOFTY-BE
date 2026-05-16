@@ -14,14 +14,15 @@ import com.softy.be.school.repository.SchoolRepository;
 import com.softy.be.school.repository.StudentRepository;
 import com.softy.be.school.repository.TeacherSettingRepository;
 import com.softy.be.school.service.ClassCodeService;
-import com.softy.be.user.dto.TeacherClassUpdateRequest;
 import com.softy.be.user.dto.ParentClassPreviewRequest;
 import com.softy.be.user.dto.ParentClassUpdateRequest;
+import com.softy.be.user.dto.TeacherClassUpdateRequest;
 import com.softy.be.user.dto.TeacherWorkHoursScheduleRequest;
 import com.softy.be.user.dto.TeacherWorkHoursUpdateRequest;
+import com.softy.be.user.entity.User;
 import com.softy.be.user.repository.SocialAccountRepository;
 import com.softy.be.user.repository.UserRepository;
-import com.softy.be.user.entity.User;
+import com.softy.be.user.repository.UserRoleRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -39,8 +40,11 @@ import java.util.Set;
 public class UserAccountService {
 
     private static final String KAKAO_PROVIDER = "KAKAO";
+    private static final String ROLE_TEACHER = "TEACHER";
+    private static final String ROLE_PARENT = "PARENT";
 
     private final UserRepository userRepository;
+    private final UserRoleRepository userRoleRepository;
     private final SocialAccountRepository socialAccountRepository;
     private final ClassroomRepository classroomRepository;
     private final ParentStudentRepository parentStudentRepository;
@@ -52,20 +56,22 @@ public class UserAccountService {
     private final KakaoOAuthClient kakaoOAuthClient;
 
     @Transactional(readOnly = true)
-    public UserMeResult getMe(Long userId) {
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "사용자를 찾을 수 없습니다"));
+    public UserMeResult getMe(Long userId, String activeRole) {
+        User user = getUserOrThrow(userId);
+        String resolvedActiveRole = normalizeRole(activeRole);
 
         Integer grade = null;
         Integer classNumber = null;
 
-        if ("TEACHER".equalsIgnoreCase(user.getRole())) {
+        if (ROLE_TEACHER.equals(resolvedActiveRole)) {
+            ensureUserHasRole(user, ROLE_TEACHER);
             Classroom classroom = classroomRepository.findFirstByTeacherIdOrderByIdDesc(userId).orElse(null);
             if (classroom != null) {
                 grade = classroom.getGrade();
                 classNumber = classroom.getClassNumber();
             }
-        } else if ("PARENT".equalsIgnoreCase(user.getRole())) {
+        } else if (ROLE_PARENT.equals(resolvedActiveRole)) {
+            ensureUserHasRole(user, ROLE_PARENT);
             ParentStudent mapping = parentStudentRepository.findFirstByParentIdOrderByIdDesc(userId).orElse(null);
             if (mapping != null && mapping.getStudent() != null && mapping.getStudent().getClassroom() != null) {
                 grade = mapping.getStudent().getClassroom().getGrade();
@@ -73,47 +79,26 @@ public class UserAccountService {
             }
         }
 
-        return new UserMeResult(user.getRole(), user.getName(), grade, classNumber);
+        return new UserMeResult(resolvedActiveRole, user.getName(), grade, classNumber);
     }
 
     @Transactional
     public void withdraw(Long userId) {
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "사용자를 찾을 수 없습니다"));
-
-        if ("WITHDRAWN".equalsIgnoreCase(user.getRole())) {
-            throw new ResponseStatusException(HttpStatus.CONFLICT, "이미 탈퇴한 계정입니다");
-        }
+        User user = getUserOrThrow(userId);
 
         socialAccountRepository.findFirstByUserIdAndProviderOrderByIdDesc(userId, KAKAO_PROVIDER)
                 .ifPresent(socialAccount -> unlinkKakaoOrThrow(socialAccount.getProviderUserId()));
 
         socialAccountRepository.deleteAllByUserId(userId);
+        userRoleRepository.deleteAllByUserId(userId);
         user.withdraw();
     }
 
-    private void unlinkKakaoOrThrow(String providerUserId) {
-        try {
-            kakaoOAuthClient.unlinkUserByAdminKey(providerUserId);
-        } catch (Exception e) {
-            throw new ResponseStatusException(
-                    HttpStatus.BAD_GATEWAY,
-                    "카카오 연결 해제에 실패하여 회원 탈퇴를 중단했습니다.",
-                    e
-            );
-        }
-    }
-
     @Transactional
-    public TeacherClassUpdateResult updateTeacherClass(Long userId, TeacherClassUpdateRequest request) {
+    public TeacherClassUpdateResult updateTeacherClass(Long userId, String activeRole, TeacherClassUpdateRequest request) {
         validateTeacherClassUpdateRequest(request);
 
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "사용자를 찾을 수 없습니다"));
-
-        if (!"TEACHER".equalsIgnoreCase(user.getRole())) {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "교사 계정만 학급을 변경할 수 있습니다");
-        }
+        User user = getTeacherUser(userId, activeRole);
 
         String schoolName = request.schoolName().trim();
         School school = schoolRepository.findByName(schoolName)
@@ -133,16 +118,11 @@ public class UserAccountService {
     }
 
     @Transactional(readOnly = true)
-    public TeacherSettingResult getTeacherSetting(Long userId) {
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "사용자를 찾을 수 없습니다"));
-
-        if (!"TEACHER".equalsIgnoreCase(user.getRole())) {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "교사 계정만 설정 정보를 조회할 수 있습니다");
-        }
+    public TeacherSettingResult getTeacherSetting(Long userId, String activeRole) {
+        User user = getTeacherUser(userId, activeRole);
 
         Classroom classroom = classroomRepository.findFirstByTeacherIdOrderByIdDesc(userId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "교사 학급 정보를 찾을 수 없습니다"));
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "교사 학급 정보를 찾을 수 없습니다."));
 
         String classCode = classCodeRepository.findFirstByClassroomIdAndIsActiveTrueOrderByIdDesc(classroom.getId())
                 .map(ClassCode::getCode)
@@ -167,19 +147,14 @@ public class UserAccountService {
     }
 
     @Transactional(readOnly = true)
-    public ParentSettingResult getParentSetting(Long userId) {
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "사용자를 찾을 수 없습니다."));
-
-        if (!"PARENT".equalsIgnoreCase(user.getRole())) {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "학부모 계정만 설정 정보를 조회할 수 있습니다.");
-        }
+    public ParentSettingResult getParentSetting(Long userId, String activeRole) {
+        getParentUser(userId, activeRole);
 
         ParentStudent mapping = parentStudentRepository.findFirstByParentIdOrderByIdDesc(userId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "연결된 자녀 정보를 찾을 수 없습니다."));
 
         if (mapping.getStudent() == null || mapping.getStudent().getClassroom() == null) {
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "학생의 학급 정보를 찾을 수 없습니다.");
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "학생 학급 정보를 찾을 수 없습니다.");
         }
 
         Classroom classroom = mapping.getStudent().getClassroom();
@@ -204,15 +179,9 @@ public class UserAccountService {
     }
 
     @Transactional(readOnly = true)
-    public ParentClassPreviewResult previewParentClassChange(Long userId, ParentClassPreviewRequest request) {
+    public ParentClassPreviewResult previewParentClassChange(Long userId, String activeRole, ParentClassPreviewRequest request) {
         validateParentClassPreviewRequest(request);
-
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "사용자를 찾을 수 없습니다."));
-
-        if (!"PARENT".equalsIgnoreCase(user.getRole())) {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "학부모 계정만 학급 변경을 요청할 수 있습니다.");
-        }
+        getParentUser(userId, activeRole);
 
         ClassCode classCode = classCodeRepository.findFirstByCodeAndIsActiveTrueOrderByIdDesc(request.classCode().trim())
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "유효한 학급 코드를 찾을 수 없습니다."));
@@ -232,15 +201,9 @@ public class UserAccountService {
     }
 
     @Transactional
-    public ParentClassUpdateResult updateParentClass(Long userId, ParentClassUpdateRequest request) {
+    public ParentClassUpdateResult updateParentClass(Long userId, String activeRole, ParentClassUpdateRequest request) {
         validateParentClassUpdateRequest(request);
-
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "사용자를 찾을 수 없습니다."));
-
-        if (!"PARENT".equalsIgnoreCase(user.getRole())) {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "학부모 계정만 학급 변경을 요청할 수 있습니다.");
-        }
+        getParentUser(userId, activeRole);
 
         ParentStudent mapping = parentStudentRepository.findFirstByParentIdOrderByIdDesc(userId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "연결된 자녀 정보를 찾을 수 없습니다."));
@@ -285,18 +248,12 @@ public class UserAccountService {
     }
 
     @Transactional
-    public void updateTeacherWorkHours(Long userId, TeacherWorkHoursUpdateRequest request) {
+    public void updateTeacherWorkHours(Long userId, String activeRole, TeacherWorkHoursUpdateRequest request) {
         if (request == null || request.schedules() == null) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "요청 본문이 필요합니다");
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "요청 본문이 필요합니다.");
         }
 
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "사용자를 찾을 수 없습니다"));
-
-        if (!"TEACHER".equalsIgnoreCase(user.getRole())) {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "교사 계정만 근무시간을 변경할 수 있습니다");
-        }
-
+        User user = getTeacherUser(userId, activeRole);
         List<TeacherSetting> newSettings = buildTeacherSettings(user, request.schedules());
 
         teacherSettingRepository.deleteAllByTeacherId(userId);
@@ -305,25 +262,72 @@ public class UserAccountService {
         }
     }
 
+    private void unlinkKakaoOrThrow(String providerUserId) {
+        try {
+            kakaoOAuthClient.unlinkUserByAdminKey(providerUserId);
+        } catch (Exception e) {
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_GATEWAY,
+                    "카카오 연결 해제에 실패하여 회원 탈퇴를 중단했습니다.",
+                    e
+            );
+        }
+    }
+
+    private User getUserOrThrow(Long userId) {
+        return userRepository.findById(userId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "사용자를 찾을 수 없습니다."));
+    }
+
+    private User getTeacherUser(Long userId, String activeRole) {
+        User user = getUserOrThrow(userId);
+        validateActiveRole(activeRole, ROLE_TEACHER, "교사 세션에서만 요청할 수 있습니다.");
+        ensureUserHasRole(user, ROLE_TEACHER);
+        return user;
+    }
+
+    private User getParentUser(Long userId, String activeRole) {
+        User user = getUserOrThrow(userId);
+        validateActiveRole(activeRole, ROLE_PARENT, "학부모 세션에서만 요청할 수 있습니다.");
+        ensureUserHasRole(user, ROLE_PARENT);
+        return user;
+    }
+
+    private void ensureUserHasRole(User user, String role) {
+        if (!user.hasRole(role)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "해당 역할이 없는 계정입니다.");
+        }
+    }
+
+    private void validateActiveRole(String activeRole, String requiredRole, String message) {
+        if (!requiredRole.equalsIgnoreCase(normalizeRole(activeRole))) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, message);
+        }
+    }
+
+    private String normalizeRole(String activeRole) {
+        return activeRole == null ? "" : activeRole.trim().toUpperCase();
+    }
+
     private List<TeacherSetting> buildTeacherSettings(User user, List<TeacherWorkHoursScheduleRequest> schedules) {
         Set<Short> days = new HashSet<>();
         List<TeacherSetting> settings = new ArrayList<>();
 
         for (TeacherWorkHoursScheduleRequest schedule : schedules) {
             if (schedule == null) {
-                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "근무시간 정보가 비어 있습니다");
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "근무시간 정보가 비어 있습니다.");
             }
             if (schedule.dayOfWeek() == null || schedule.dayOfWeek() < 1 || schedule.dayOfWeek() > 7) {
-                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "dayOfWeek는 1~7 사이여야 합니다");
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "dayOfWeek는 1~7 사이여야 합니다.");
             }
             if (!days.add(schedule.dayOfWeek())) {
-                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "요일은 중복될 수 없습니다");
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "요일은 중복될 수 없습니다.");
             }
             if (schedule.startTime() == null || schedule.endTime() == null) {
-                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "근무 시작/종료 시간은 필수입니다");
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "근무 시작/종료 시간은 필수입니다.");
             }
             if (!schedule.startTime().isBefore(schedule.endTime())) {
-                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "근무 시작 시간은 종료 시간보다 빨라야 합니다");
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "근무 시작 시간은 종료 시간보다 빨라야 합니다.");
             }
 
             settings.add(TeacherSetting.create(
@@ -373,16 +377,16 @@ public class UserAccountService {
 
     private void validateTeacherClassUpdateRequest(TeacherClassUpdateRequest request) {
         if (request == null) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "요청 본문이 필요합니다");
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "요청 본문이 필요합니다.");
         }
         if (isBlank(request.schoolName())) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "학교 이름은 필수입니다");
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "학교 이름은 필수입니다.");
         }
         if (request.grade() == null || request.grade() < 1 || request.grade() > 6) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "학년은 1~6 사이여야 합니다");
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "학년은 1~6 사이여야 합니다.");
         }
         if (request.classNumber() == null || request.classNumber() < 1 || request.classNumber() > 30) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "반 번호는 1~30 사이여야 합니다");
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "반 번호는 1~30 사이여야 합니다.");
         }
     }
 

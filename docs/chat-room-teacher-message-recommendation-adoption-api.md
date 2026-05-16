@@ -1,5 +1,7 @@
 # 교사 추천문장 적용 기록 API
 
+- 현재 세션의 `activeRole`이 `TEACHER`여야 함
+
 - 엔드포인트: `POST /teacher-message-analyses/{analysisId}/recommendation-adoption`
 - 목적: 교사가 AI 추천문장을 입력창에 적용했다는 행위를 기록한다.
 - 부수 동작:

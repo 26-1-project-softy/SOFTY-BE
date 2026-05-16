@@ -1,5 +1,7 @@
 # 교사 메시지 분석 피드백 저장 API
 
+- 현재 세션의 `activeRole`이 `TEACHER`여야 함
+
 - 엔드포인트: `PUT /teacher-message-analyses/{analysisId}/feedback`
 - 목적: 교사가 AI 메시지 분석 결과에 대해 1~5점 피드백을 남긴다.
 - 부수 동작:

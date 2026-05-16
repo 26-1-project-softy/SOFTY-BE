@@ -56,7 +56,8 @@ public class AiRetrainingJobClient {
 
             return new AiRetrainingJobResult(
                     nullToEmpty(body.jobId),
-                    nullToEmpty(body.status)
+                    nullToEmpty(body.status),
+                    body.progressPercent
             );
         } catch (HttpStatusCodeException e) {
             throw new ResponseStatusException(BAD_GATEWAY, "AI 재학습 API 호출에 실패했습니다. 상태코드: " + e.getStatusCode(), e);
@@ -84,7 +85,8 @@ public class AiRetrainingJobClient {
 
     public record AiRetrainingJobResult(
             String jobId,
-            String status
+            String status,
+            Integer progressPercent
     ) {
     }
 }

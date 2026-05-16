@@ -1,4 +1,4 @@
-﻿# SOFTY Backend
+# SOFTY Backend
 
 SOFTY 백엔드는 교사-학부모 소통 과정의 분쟁 리스크 완화를 목표로 하는 서비스 서버입니다.
 
@@ -51,11 +51,31 @@ SOFTY 백엔드는 교사-학부모 소통 과정의 분쟁 리스크 완화를 
 - 연결 정보는 환경변수 `DB_URL`, `DB_USERNAME`, `DB_PASSWORD`로 주입
 - JPA 설정이 `ddl-auto: validate`이므로, 실행 전 DB 스키마가 준비되어 있어야 함
 - 테스트(`application-test.yml`)는 H2 in-memory DB 사용
-- 스키마 초안 문서: `docs/db-schema.md`
+- 스키마 문서:
+  - 요약: `docs/db-schema.md`
+  - 실행용 SQL: `docs/db-schema-postgres.sql`
 
-## 5. 로컬 실행
+## 5. 인증/권한 모델
 
-### 5.1 애플리케이션 실행
+현재 백엔드는 단일 `users.role` 컬럼 대신 아래 구조를 사용합니다.
+
+- `users`
+  - 로그인 주체 계정 정보 보관
+- `user_role`
+  - 한 계정이 보유한 역할 목록 보관
+  - 예: `TEACHER`, `PARENT`, `ADMIN`
+- JWT `activeRole`
+  - 현재 세션이 어떤 역할로 동작 중인지 표현
+
+예시:
+
+- 같은 카카오 계정이 `TEACHER`, `PARENT`를 둘 다 가질 수 있음
+- `/auth/kakao/login`으로 로그인하면 학부모 세션(`activeRole=PARENT`)
+- `/auth/kakao/login/teacher`로 로그인하면 교사 세션(`activeRole=TEACHER`)
+
+## 6. 로컬 실행
+
+### 6.1 애플리케이션 실행
 
 ```bash
 # Windows
@@ -67,7 +87,7 @@ SOFTY 백엔드는 교사-학부모 소통 과정의 분쟁 리스크 완화를 
 
 기본 포트: `8080`
 
-### 5.2 테스트 실행
+### 6.2 테스트 실행
 
 ```bash
 ./gradlew test
@@ -75,26 +95,27 @@ SOFTY 백엔드는 교사-학부모 소통 과정의 분쟁 리스크 완화를 
 
 테스트 프로필은 `application-test.yml`을 사용하며 H2(in-memory) DB로 동작합니다.
 
-### 5.3 Docker 실행
+### 6.3 Docker 실행
 
 ```bash
 docker build -t softy-be .
 docker run --env-file .env -p 8080:8080 softy-be
 ```
 
-## 6. 폴더 구조
+## 7. 폴더 구조
 
 ```text
 softy-be/
 ├─ src/
 │  ├─ main/
 │  │  ├─ java/com/softy/be/
-│  │  │  ├─ admin/         # 관리자 인증 (controller/dto/service)
-│  │  │  ├─ auth/          # 인증 (controller/dto/service)
-│  │  │  ├─ user/          # 사용자 (controller/dto/service/entity/repository)
-│  │  │  ├─ school/        # 학교/학급 (entity/repository)
-│  │  │  ├─ chat/          # 채팅 (entity)
-│  │  │  ├─ common/        # 공통 (api/config/entity)
+│  │  │  ├─ admin/         # 관리자 인증/통계
+│  │  │  ├─ auth/          # 인증/JWT
+│  │  │  ├─ user/          # 사용자/설정/회원가입
+│  │  │  ├─ school/        # 학교/학급
+│  │  │  ├─ chat/          # 채팅
+│  │  │  ├─ report/        # 증빙 리포트
+│  │  │  ├─ common/        # 공통 설정/응답/엔티티
 │  │  │  ├─ health/        # 헬스체크
 │  │  │  └─ BeApplication.java
 │  │  └─ resources/
@@ -102,6 +123,7 @@ softy-be/
 │  └─ test/
 │     ├─ java/com/softy/be/
 │     └─ resources/application-test.yml
+├─ docs/
 ├─ gradle/wrapper/
 ├─ build.gradle
 ├─ settings.gradle
@@ -109,19 +131,22 @@ softy-be/
 └─ README.md
 ```
 
-## 7. 도메인 모델 요약
+## 8. 도메인 모델 요약
 
-- `User`: 사용자 정보 및 역할 관리
+- `User`: 사용자 계정 정보
+- `UserRole`: 사용자 보유 역할
 - `SocialAccount`: 소셜 계정(KAKAO) 매핑
 - `School`: 학교 정보
 - `Classroom`: 학급 정보(학년/반/담임)
 - `ClassCode`: 학급 참여 코드
 - `Student`: 학생 정보
 - `ParentStudent`: 학부모-학생 연결 정보
+- `TeacherSetting`: 교사 근무시간 설정
 - `ChatRoom`: 채팅방 정보
+- `ChatRoomUserMap`: 채팅방 참여자 매핑
 - `Message`: 메시지 정보
 
-## 8. 운영 시 주의사항
+## 9. 운영 시 주의사항
 
 - JPA 설정이 `ddl-auto: validate`이므로 운영 DB 스키마를 사전에 준비해야 합니다.
 - `.env`에는 민감정보(DB 비밀번호, OAuth 시크릿 등)가 포함될 수 있으므로 외부 공유를 금지하세요.
