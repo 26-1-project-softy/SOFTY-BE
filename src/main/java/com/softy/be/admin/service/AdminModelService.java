@@ -4,6 +4,7 @@ import com.softy.be.admin.dto.AdminLatestModelData;
 import com.softy.be.admin.dto.AdminRetrainingJobData;
 import com.softy.be.admin.dto.AdminTrainingJobHistoryData;
 import com.softy.be.admin.dto.AdminTrainingJobHistoryItemData;
+import com.softy.be.admin.dto.AdminTrainingJobStatusData;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -34,6 +35,22 @@ public class AdminModelService {
                 nullIfBlank(result.datasetVersion()),
                 nullToEmpty(result.status()),
                 lastTrainedAt
+        );
+    }
+
+    @Transactional(readOnly = true)
+    public AdminTrainingJobStatusData getTrainingJobStatus(String jobId) {
+        AiTrainingJobClient.AiTrainingJobResult result = aiTrainingJobClient.getTrainingJob(jobId);
+
+        return new AdminTrainingJobStatusData(
+                nullToEmpty(result.jobId()),
+                nullToEmpty(result.modelName()),
+                nullToEmpty(result.modelVersion()),
+                nullIfBlank(result.datasetVersion()),
+                normalizeStatus(result.status()),
+                result.progressPercent(),
+                nullToEmpty(result.startedAt()),
+                nullToEmpty(result.finishedAt())
         );
     }
 
@@ -72,7 +89,8 @@ public class AdminModelService {
 
         return new AdminRetrainingJobData(
                 nullToEmpty(result.jobId()),
-                normalizeStatus(result.status())
+                normalizeStatus(result.status()),
+                result.progressPercent()
         );
     }
 

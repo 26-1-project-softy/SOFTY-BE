@@ -3,6 +3,7 @@
 - 메서드와 경로: `PATCH /chat-rooms/{chatRoomId}/status`
 - 목적: 교사가 채팅방 상세 상단 드롭다운에서 채팅방 처리 상태를 `처리중`, `완료` 중 하나로 변경한다.
 - 변경 대상: `chat_room.status`
+- 현재 세션의 `activeRole`이 `TEACHER`여야 함
 
 ## 요청
 

@@ -18,4 +18,7 @@ public class AiRetrainingJobApiResponse {
     public String jobId;
 
     public String status;
+
+    @JsonProperty("progress_percent")
+    public Integer progressPercent;
 }

@@ -11,11 +11,12 @@
 ## 처리 규칙
 
 1. JWT로 로그인한 사용자를 확인한다.
-2. 로그인 사용자가 학부모(`PARENT`)인지 확인한다.
-3. 해당 학부모와 연결된 자녀 1명을 조회한다.
-4. 자녀의 학급과 담당 교사를 조회한다.
-5. 담당 교사의 근무시간 설정을 조회한다.
-6. 근무시간이 없으면 `schedules`는 빈 배열(`[]`)로 반환한다.
+2. 현재 세션의 `activeRole`이 `PARENT`인지 확인한다.
+3. 해당 사용자가 실제로 `PARENT` 역할을 보유하는지 확인한다.
+4. 해당 학부모의 연결 자녀 1명을 조회한다.
+5. 자녀의 학급과 담임 교사를 조회한다.
+6. 해당 교사의 근무시간 설정을 조회한다.
+7. 근무시간이 없으면 `schedules`는 빈 배열(`[]`)로 반환한다.
 
 ## 응답
 
@@ -42,30 +43,23 @@
 
 ## 응답 필드
 
-- `data.grade` (`int`)
-  - 학년
-- `data.classNumber` (`int`)
-  - 반 번호
-- `data.studentName` (`String`)
-  - 학생 이름
-- `data.teacherName` (`String`)
-  - 담당 교사 이름
-- `data.schedules` (`Array`)
-  - 담당 교사 근무시간 목록
-- `data.schedules[].dayOfWeek` (`int`)
-  - 요일 번호 (`1~7`)
-- `data.schedules[].startTime` (`String`)
-  - 근무 시작 시간 (`HH:mm`)
-- `data.schedules[].endTime` (`String`)
-  - 근무 종료 시간 (`HH:mm`)
+- `data.grade` (`int`): 학년
+- `data.classNumber` (`int`): 반 번호
+- `data.studentName` (`String`): 학생 이름
+- `data.teacherName` (`String`): 담임 교사 이름
+- `data.schedules` (`Array`): 교사 근무시간 목록
+- `data.schedules[].dayOfWeek` (`int`): 요일 번호 (`1~7`)
+- `data.schedules[].startTime` (`String`): 시작 시간 (`HH:mm`)
+- `data.schedules[].endTime` (`String`): 종료 시간 (`HH:mm`)
 
 ## 오류 응답
 
 - `403 Forbidden`
-  - 학부모 계정이 아닌 경우
+  - 현재 세션의 `activeRole`이 `PARENT`가 아닌 경우
+  - `PARENT` 역할이 실제로 없는 계정인 경우
 - `404 Not Found`
-  - 사용자, 연결된 자녀, 학급, 담당 교사 정보를 찾을 수 없는 경우
+  - 사용자, 연결 자녀, 학급, 담임 교사 정보를 찾을 수 없는 경우
 
 ## 비고
 
-- 현재 MVP 정책상 학부모는 자녀 1명, 담당 교사 1명과 연결된 것으로 가정한다.
+- 현재 MVP 정책상 학부모는 자녀 1명, 담임 교사 1명 기준으로 동작합니다.

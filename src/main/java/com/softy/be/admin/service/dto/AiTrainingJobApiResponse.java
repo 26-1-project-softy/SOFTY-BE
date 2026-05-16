@@ -19,6 +19,9 @@ public class AiTrainingJobApiResponse {
 
     public String status;
 
+    @JsonProperty("progress_percent")
+    public Integer progressPercent;
+
     @JsonProperty("started_at")
     public String startedAt;
 

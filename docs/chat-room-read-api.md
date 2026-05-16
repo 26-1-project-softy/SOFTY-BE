@@ -3,6 +3,7 @@
 ## 개요
 - 로그인한 사용자가 특정 채팅방의 안 읽은 메시지를 모두 읽음 처리하는 API
 - 엔드포인트: `POST /chat-rooms/{chatRoomId}/read`
+- 현재 세션의 `activeRole`이 `TEACHER` 또는 `PARENT`여야 함
 - 호출 가능 사용자: 학부모(`PARENT`), 교사(`TEACHER`)
 
 ## 인증/권한

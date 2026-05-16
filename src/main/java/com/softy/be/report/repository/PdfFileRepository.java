@@ -16,7 +16,8 @@ public interface PdfFileRepository extends JpaRepository<PdfFile, Long> {
                         COUNT(pf.id) AS pdfCount
                     FROM pdf_file pf
                     JOIN users u ON u.id = pf.created_by
-                    WHERE UPPER(u.role) = 'TEACHER'
+                    JOIN user_role ur ON ur.user_id = u.id
+                    WHERE UPPER(ur.role) = 'TEACHER'
                     GROUP BY u.id, u.name
                     ORDER BY COUNT(pf.id) DESC, u.name ASC, u.id ASC
                     """,
@@ -24,4 +25,3 @@ public interface PdfFileRepository extends JpaRepository<PdfFile, Long> {
     )
     List<TeacherPdfCountRow> findTeacherPdfCounts();
 }
-

@@ -13,7 +13,8 @@ public interface AiRecommendationRepository extends JpaRepository<AiRecommendati
             FROM AiRecommendation ar
             JOIN ar.message m
             JOIN m.sender s
-            WHERE UPPER(s.role) = 'TEACHER'
+            JOIN s.userRoles ur
+            WHERE UPPER(ur.role) = 'TEACHER'
               AND ar.content IS NOT NULL
             """)
     long countTeacherRecommendations();
@@ -22,8 +23,8 @@ public interface AiRecommendationRepository extends JpaRepository<AiRecommendati
             SELECT COUNT(ar.id)
             FROM ai_recommendation ar
             JOIN message m ON m.id = ar.message_id
-            JOIN users u ON u.id = m.sender_id
-            WHERE UPPER(u.role) = 'TEACHER'
+            JOIN user_role ur ON ur.user_id = m.sender_id
+            WHERE UPPER(ur.role) = 'TEACHER'
               AND ar.content IS NOT NULL
               AND ar.embedding IS NOT NULL
             """, nativeQuery = true)
@@ -33,8 +34,8 @@ public interface AiRecommendationRepository extends JpaRepository<AiRecommendati
             SELECT COUNT(ar.id)
             FROM ai_recommendation ar
             JOIN message m ON m.id = ar.message_id
-            JOIN users u ON u.id = m.sender_id
-            WHERE UPPER(u.role) = 'TEACHER'
+            JOIN user_role ur ON ur.user_id = m.sender_id
+            WHERE UPPER(ur.role) = 'TEACHER'
               AND ar.content IS NOT NULL
               AND ar.embedding IS NOT NULL
               AND COALESCE(ar.is_recommendation_used, FALSE) = TRUE
@@ -47,8 +48,8 @@ public interface AiRecommendationRepository extends JpaRepository<AiRecommendati
             SELECT COUNT(ar.id)
             FROM ai_recommendation ar
             JOIN message m ON m.id = ar.message_id
-            JOIN users u ON u.id = m.sender_id
-            WHERE UPPER(u.role) = 'TEACHER'
+            JOIN user_role ur ON ur.user_id = m.sender_id
+            WHERE UPPER(ur.role) = 'TEACHER'
               AND ar.content IS NOT NULL
               AND ar.embedding IS NOT NULL
               AND COALESCE(ar.is_recommendation_used, FALSE) = TRUE
@@ -66,8 +67,8 @@ public interface AiRecommendationRepository extends JpaRepository<AiRecommendati
             SELECT COUNT(ar.id)
             FROM ai_recommendation ar
             JOIN message m ON m.id = ar.message_id
-            JOIN users u ON u.id = m.sender_id
-            WHERE UPPER(u.role) = 'TEACHER'
+            JOIN user_role ur ON ur.user_id = m.sender_id
+            WHERE UPPER(ur.role) = 'TEACHER'
               AND ar.content IS NOT NULL
               AND ar.embedding IS NOT NULL
               AND NOT (
@@ -102,8 +103,8 @@ public interface AiRecommendationRepository extends JpaRepository<AiRecommendati
                 m.modify_content AS messageModifyContent
             FROM ai_recommendation ar
             JOIN message m ON m.id = ar.message_id
-            JOIN users u ON u.id = m.sender_id
-            WHERE UPPER(u.role) = 'TEACHER'
+            JOIN user_role ur ON ur.user_id = m.sender_id
+            WHERE UPPER(ur.role) = 'TEACHER'
               AND (
                     ar.embedding IS NULL
                     OR m.content_embedding IS NULL
@@ -115,4 +116,3 @@ public interface AiRecommendationRepository extends JpaRepository<AiRecommendati
             """, nativeQuery = true)
     List<EmbeddingCandidateRow> findTeacherEmbeddingCandidates();
 }
-

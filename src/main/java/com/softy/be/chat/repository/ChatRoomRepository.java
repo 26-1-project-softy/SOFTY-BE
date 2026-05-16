@@ -21,7 +21,7 @@ public interface ChatRoomRepository extends JpaRepository<ChatRoom, Long> {
                                 FROM chat_room_user_map crm2
                                 JOIN users pu ON pu.id = crm2.user_id
                                 WHERE crm2.chat_room_id = cr.id
-                                  AND UPPER(pu.role) = 'PARENT'
+                                  AND crm2.participant_role = 'PARENT'
                                 ORDER BY crm2.id DESC
                                 LIMIT 1
                             ),
@@ -33,11 +33,10 @@ public interface ChatRoomRepository extends JpaRepository<ChatRoom, Long> {
                                 FROM parent_student ps
                                 JOIN student s ON s.id = ps.student_id
                                 WHERE ps.parent_id = (
-                                    SELECT pu2.id
+                                    SELECT crm3.user_id
                                     FROM chat_room_user_map crm3
-                                    JOIN users pu2 ON pu2.id = crm3.user_id
                                     WHERE crm3.chat_room_id = cr.id
-                                      AND UPPER(pu2.role) = 'PARENT'
+                                      AND crm3.participant_role = 'PARENT'
                                     ORDER BY crm3.id DESC
                                     LIMIT 1
                                 )
@@ -52,6 +51,7 @@ public interface ChatRoomRepository extends JpaRepository<ChatRoom, Long> {
                     JOIN chat_room_user_map my_map
                       ON my_map.chat_room_id = cr.id
                      AND my_map.user_id = :teacherId
+                     AND my_map.participant_role = 'TEACHER'
                     WHERE cr.id = :chatRoomId
                     """,
             nativeQuery = true
@@ -71,7 +71,7 @@ public interface ChatRoomRepository extends JpaRepository<ChatRoom, Long> {
                                 FROM chat_room_user_map crm2
                                 JOIN users tu ON tu.id = crm2.user_id
                                 WHERE crm2.chat_room_id = cr.id
-                                  AND UPPER(tu.role) = 'TEACHER'
+                                  AND crm2.participant_role = 'TEACHER'
                                 ORDER BY crm2.id DESC
                                 LIMIT 1
                             ),
@@ -94,6 +94,7 @@ public interface ChatRoomRepository extends JpaRepository<ChatRoom, Long> {
                     JOIN chat_room_user_map my_map
                       ON my_map.chat_room_id = cr.id
                      AND my_map.user_id = :parentId
+                     AND my_map.participant_role = 'PARENT'
                     WHERE cr.id = :chatRoomId
                     """,
             nativeQuery = true
@@ -143,7 +144,7 @@ public interface ChatRoomRepository extends JpaRepository<ChatRoom, Long> {
                                 FROM chat_room_user_map crm2
                                 JOIN users pu ON pu.id = crm2.user_id
                                 WHERE crm2.chat_room_id = cr.id
-                                  AND UPPER(pu.role) = 'PARENT'
+                                  AND crm2.participant_role = 'PARENT'
                                 ORDER BY crm2.id DESC
                                 LIMIT 1
                             ),
@@ -155,11 +156,10 @@ public interface ChatRoomRepository extends JpaRepository<ChatRoom, Long> {
                                 FROM parent_student ps
                                 JOIN student s ON s.id = ps.student_id
                                 WHERE ps.parent_id = (
-                                    SELECT pu2.id
+                                    SELECT crm3.user_id
                                     FROM chat_room_user_map crm3
-                                    JOIN users pu2 ON pu2.id = crm3.user_id
                                     WHERE crm3.chat_room_id = cr.id
-                                      AND UPPER(pu2.role) = 'PARENT'
+                                      AND crm3.participant_role = 'PARENT'
                                     ORDER BY crm3.id DESC
                                     LIMIT 1
                                 )
@@ -177,6 +177,7 @@ public interface ChatRoomRepository extends JpaRepository<ChatRoom, Long> {
                     JOIN chat_room_user_map my_map
                       ON my_map.chat_room_id = cr.id
                      AND my_map.user_id = :teacherId
+                     AND my_map.participant_role = 'TEACHER'
                     LEFT JOIN latest_message lm ON lm.chat_room_id = cr.id
                     WHERE :cursor IS NULL
                        OR (
@@ -238,7 +239,7 @@ public interface ChatRoomRepository extends JpaRepository<ChatRoom, Long> {
                                 FROM chat_room_user_map crm2
                                 JOIN users tu ON tu.id = crm2.user_id
                                 WHERE crm2.chat_room_id = cr.id
-                                  AND UPPER(tu.role) = 'TEACHER'
+                                  AND crm2.participant_role = 'TEACHER'
                                 ORDER BY crm2.id DESC
                                 LIMIT 1
                             ),
@@ -264,6 +265,7 @@ public interface ChatRoomRepository extends JpaRepository<ChatRoom, Long> {
                     JOIN chat_room_user_map my_map
                       ON my_map.chat_room_id = cr.id
                      AND my_map.user_id = :parentId
+                     AND my_map.participant_role = 'PARENT'
                     LEFT JOIN latest_message lm ON lm.chat_room_id = cr.id
                     WHERE :cursor IS NULL
                        OR (
@@ -300,6 +302,24 @@ public interface ChatRoomRepository extends JpaRepository<ChatRoom, Long> {
 
     @Query(
             value = """
+                    SELECT EXISTS (
+                        SELECT 1
+                        FROM chat_room_user_map crm
+                        WHERE crm.chat_room_id = :chatRoomId
+                          AND crm.user_id = :userId
+                          AND UPPER(crm.participant_role) = UPPER(:participantRole)
+                    )
+                    """,
+            nativeQuery = true
+    )
+    boolean existsParticipantByChatRoomIdAndUserIdAndParticipantRole(
+            @Param("chatRoomId") Long chatRoomId,
+            @Param("userId") Long userId,
+            @Param("participantRole") String participantRole
+    );
+
+    @Query(
+            value = """
                     SELECT
                         cr.id AS chatRoomId,
                         (
@@ -307,7 +327,7 @@ public interface ChatRoomRepository extends JpaRepository<ChatRoom, Long> {
                             FROM chat_room_user_map crm2
                             JOIN users pu ON pu.id = crm2.user_id
                             WHERE crm2.chat_room_id = cr.id
-                              AND UPPER(pu.role) = 'PARENT'
+                              AND crm2.participant_role = 'PARENT'
                             ORDER BY crm2.id DESC
                             LIMIT 1
                         ) AS parentName,
@@ -316,11 +336,10 @@ public interface ChatRoomRepository extends JpaRepository<ChatRoom, Long> {
                             FROM parent_student ps
                             JOIN student s ON s.id = ps.student_id
                             WHERE ps.parent_id = (
-                                SELECT pu2.id
+                                SELECT crm3.user_id
                                 FROM chat_room_user_map crm3
-                                JOIN users pu2 ON pu2.id = crm3.user_id
                                 WHERE crm3.chat_room_id = cr.id
-                                  AND UPPER(pu2.role) = 'PARENT'
+                                  AND crm3.participant_role = 'PARENT'
                                 ORDER BY crm3.id DESC
                                 LIMIT 1
                             )
@@ -339,6 +358,7 @@ public interface ChatRoomRepository extends JpaRepository<ChatRoom, Long> {
                         FROM chat_room_user_map crm
                         WHERE crm.chat_room_id = cr.id
                           AND crm.user_id = :teacherId
+                          AND crm.participant_role = 'TEACHER'
                     )
                     ORDER BY
                         COALESCE(
@@ -355,6 +375,7 @@ public interface ChatRoomRepository extends JpaRepository<ChatRoom, Long> {
                         FROM chat_room_user_map crm
                         WHERE crm.chat_room_id = cr.id
                           AND crm.user_id = :teacherId
+                          AND crm.participant_role = 'TEACHER'
                     )
                     """,
             nativeQuery = true
@@ -367,7 +388,7 @@ public interface ChatRoomRepository extends JpaRepository<ChatRoom, Long> {
                     FROM chat_room_user_map crm
                     JOIN users pu ON pu.id = crm.user_id
                     WHERE crm.chat_room_id = :chatRoomId
-                      AND UPPER(pu.role) = 'PARENT'
+                      AND crm.participant_role = 'PARENT'
                     ORDER BY crm.id DESC
                     LIMIT 1
                     """,
