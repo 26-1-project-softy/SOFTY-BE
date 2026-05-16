@@ -15,6 +15,7 @@ import com.softy.be.school.repository.StudentRepository;
 import com.softy.be.school.service.ClassCodeService;
 import com.softy.be.user.entity.User;
 import com.softy.be.user.repository.UserRepository;
+import com.softy.be.user.repository.UserRoleRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -25,11 +26,11 @@ import org.springframework.web.server.ResponseStatusException;
 @RequiredArgsConstructor
 public class UserRegistrationService {
 
-    private static final String ROLE_UNASSIGNED = "UNASSIGNED";
     private static final String ROLE_TEACHER = "TEACHER";
-    private static final String LEGACY_ROLE_USER = "USER";
+    private static final String ROLE_PARENT = "PARENT";
 
     private final UserRepository userRepository;
+    private final UserRoleRepository userRoleRepository;
     private final SchoolRepository schoolRepository;
     private final ClassroomRepository classroomRepository;
     private final ClassCodeRepository classCodeRepository;
@@ -44,8 +45,8 @@ public class UserRegistrationService {
         User user = userRepository.findById(authenticatedUserId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "사용자를 찾을 수 없습니다."));
 
-        if (!isRegistrationRequired(user.getRole())) {
-            throw new ResponseStatusException(HttpStatus.CONFLICT, "이미 회원가입이 완료된 사용자입니다.");
+        if (userRoleRepository.existsByUserIdAndRole(authenticatedUserId, ROLE_TEACHER)) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "이미 교사 회원가입이 완료된 사용자입니다.");
         }
 
         School school = schoolRepository.findByName(request.schoolName().trim())
@@ -56,16 +57,18 @@ public class UserRegistrationService {
         );
 
         user.completeTeacherSignup(request.teacherName().trim());
-        return new TeacherSignupResult(user.getId(), user.getRole());
+        return new TeacherSignupResult(user.getId(), ROLE_TEACHER);
     }
 
     @Transactional
-    public ClassCodeCreateResult createTeacherClassCode(Long authenticatedUserId) {
+    public ClassCodeCreateResult createTeacherClassCode(Long authenticatedUserId, String activeRole) {
         User user = userRepository.findById(authenticatedUserId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "사용자를 찾을 수 없습니다."));
 
-        if (!ROLE_TEACHER.equalsIgnoreCase(user.getRole())) {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "교사 계정만 학급 코드를 생성할 수 있습니다.");
+        validateActiveRole(activeRole, ROLE_TEACHER, "교사 계정만 학급 코드를 생성할 수 있습니다.");
+
+        if (!user.hasRole(ROLE_TEACHER)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "교사 역할이 없는 계정입니다.");
         }
 
         Classroom classroom = classroomRepository.findFirstByTeacherIdOrderByIdDesc(authenticatedUserId)
@@ -82,8 +85,8 @@ public class UserRegistrationService {
         User user = userRepository.findById(authenticatedUserId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "사용자를 찾을 수 없습니다."));
 
-        if (!isRegistrationRequired(user.getRole())) {
-            throw new ResponseStatusException(HttpStatus.CONFLICT, "이미 회원가입이 완료된 사용자입니다.");
+        if (userRoleRepository.existsByUserIdAndRole(authenticatedUserId, ROLE_PARENT)) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "이미 학부모 회원가입이 완료된 사용자입니다.");
         }
 
         ClassCode classCode = classCodeRepository.findFirstByCodeAndIsActiveTrueOrderByIdDesc(request.classCode().trim())
@@ -114,11 +117,7 @@ public class UserRegistrationService {
         }
 
         user.completeParentSignup(request.parentName().trim());
-        return new ParentSignupResult(user.getId(), user.getRole());
-    }
-
-    private boolean isRegistrationRequired(String role) {
-        return role == null || ROLE_UNASSIGNED.equalsIgnoreCase(role) || LEGACY_ROLE_USER.equalsIgnoreCase(role);
+        return new ParentSignupResult(user.getId(), ROLE_PARENT);
     }
 
     private void validateTeacherSignupRequest(TeacherSignupRequest request) {
@@ -161,6 +160,12 @@ public class UserRegistrationService {
         }
         if (isBlank(request.classCode())) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "학급 코드는 필수입니다.");
+        }
+    }
+
+    private void validateActiveRole(String activeRole, String requiredRole, String message) {
+        if (!requiredRole.equalsIgnoreCase(activeRole)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, message);
         }
     }
 

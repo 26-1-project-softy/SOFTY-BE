@@ -38,7 +38,7 @@
 - `data.totalNotUsed`: 추천문장을 사실상 사용하지 않은 건수
 
 ## 집계 기준
-- 집계 대상: `ai_recommendation`과 연결된 교사 메시지(`message.sender.role = TEACHER`)
+- 집계 대상: `ai_recommendation`과 연결된 메시지 중 발신 사용자가 `TEACHER` 역할을 보유한 건
 - `totalUsedAsIs`
   - `ai_recommendation.embedding IS NOT NULL`
   - `COALESCE(ai_recommendation.is_recommendation_used, false) = true`

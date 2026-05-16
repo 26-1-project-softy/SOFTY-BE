@@ -1,5 +1,7 @@
 # 교사 수정 메시지 재분석 API
 
+- 현재 세션의 `activeRole`이 `TEACHER`여야 함
+
 - 엔드포인트: `POST /teacher-message-analyses/{analysisId}/recheck`
 - 목적: 교사가 추천문장을 수정한 뒤, 최종 전송 전에 수정된 문장을 다시 AI로 분석한다.
 - 부수 동작:

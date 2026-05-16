@@ -44,7 +44,7 @@
 - `data.finishedAt`: 실행 종료 시각 (서버 로컬 시간)
 
 ## 처리 기준
-- 대상: 교사(`sender.role=TEACHER`) 메시지와 연결된 추천문장 중 아래 조건 하나 이상 해당 건
+- 대상: 발신 사용자가 `TEACHER` 역할을 보유한 메시지와 연결된 추천문장 중 아래 조건 하나 이상 해당 건
   - `ai_recommendation.embedding IS NULL`
   - `message.content_embedding IS NULL`
   - `message.modify_content IS NOT NULL AND message.modify_content_embedding IS NULL`

@@ -40,7 +40,7 @@ public class TeacherController {
             @AuthenticationPrincipal AuthenticatedUserPrincipal principal
     ) {
         Long userId = principal.userId();
-        TeacherSettingResult result = userAccountService.getTeacherSetting(userId);
+        TeacherSettingResult result = userAccountService.getTeacherSetting(userId, principal.activeRole());
 
         List<TeacherSettingScheduleData> schedules = result.schedules()
                 .stream()
@@ -78,7 +78,7 @@ public class TeacherController {
             @RequestBody TeacherClassUpdateRequest request
     ) {
         Long userId = principal.userId();
-        TeacherClassUpdateResult result = userAccountService.updateTeacherClass(userId, request);
+        TeacherClassUpdateResult result = userAccountService.updateTeacherClass(userId, principal.activeRole(), request);
 
         ApiResponse<TeacherClassUpdateData> response = ApiResponse.of(
                 true,
@@ -100,7 +100,7 @@ public class TeacherController {
             @RequestBody TeacherWorkHoursUpdateRequest request
     ) {
         Long userId = principal.userId();
-        userAccountService.updateTeacherWorkHours(userId, request);
+        userAccountService.updateTeacherWorkHours(userId, principal.activeRole(), request);
 
         ApiResponse<Object> response = ApiResponse.of(
                 true,

@@ -94,12 +94,42 @@ class AdminModelServiceTest {
     @Test
     void requestRiskDetectionRetrainingReturnsJobIdAndNormalizedStatus() {
         when(aiRetrainingJobClient.requestRiskDetectionRetraining()).thenReturn(
-                new AiRetrainingJobClient.AiRetrainingJobResult("retrain_20260326_001", "queued")
+                new AiRetrainingJobClient.AiRetrainingJobResult("retrain_20260326_001", "queued", 15)
         );
 
         var result = adminModelService.requestRiskDetectionRetraining();
 
         assertThat(result.jobId()).isEqualTo("retrain_20260326_001");
         assertThat(result.status()).isEqualTo("QUEUED");
+        assertThat(result.progressPercent()).isEqualTo(15);
+    }
+
+    @Test
+    void getTrainingJobStatusReturnsPollingFields() {
+        when(aiTrainingJobClient.getTrainingJob("retrain_20260516_6D8")).thenReturn(
+                new AiTrainingJobClient.AiTrainingJobResult(
+                        "retrain_20260516_6D8",
+                        "kanana-risk-detector",
+                        "v1.2.9",
+                        "v1.1",
+                        "failed",
+                        0,
+                        "2026-05-16T12:15:36",
+                        "",
+                        200,
+                        "success"
+                )
+        );
+
+        var result = adminModelService.getTrainingJobStatus("retrain_20260516_6D8");
+
+        assertThat(result.jobId()).isEqualTo("retrain_20260516_6D8");
+        assertThat(result.modelName()).isEqualTo("kanana-risk-detector");
+        assertThat(result.modelVersion()).isEqualTo("v1.2.9");
+        assertThat(result.datasetVersion()).isEqualTo("v1.1");
+        assertThat(result.status()).isEqualTo("FAILED");
+        assertThat(result.progressPercent()).isEqualTo(0);
+        assertThat(result.startedAt()).isEqualTo("2026-05-16T12:15:36");
+        assertThat(result.finishedAt()).isEqualTo("");
     }
 }

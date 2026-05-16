@@ -31,12 +31,12 @@ public class JwtService {
         this.refreshExpirationSeconds = refreshExpirationSeconds;
     }
 
-    public String createAccessToken(Long userId, String name, String role) {
+    public String createAccessToken(Long userId, String name, String activeRole) {
         Instant now = Instant.now();
         return Jwts.builder()
                 .subject(String.valueOf(userId))
                 .claim("name", name)
-                .claim("role", role)
+                .claim("activeRole", activeRole)
                 .claim("tokenType", "ACCESS")
                 .issuedAt(Date.from(now))
                 .expiration(Date.from(now.plusSeconds(accessExpirationSeconds)))
@@ -44,11 +44,11 @@ public class JwtService {
                 .compact();
     }
 
-    public String createRefreshToken(Long userId, String role) {
+    public String createRefreshToken(Long userId, String activeRole) {
         Instant now = Instant.now();
         return Jwts.builder()
                 .subject(String.valueOf(userId))
-                .claim("role", role)
+                .claim("activeRole", activeRole)
                 .claim("tokenType", "REFRESH")
                 .issuedAt(Date.from(now))
                 .expiration(Date.from(now.plusSeconds(refreshExpirationSeconds)))
@@ -68,6 +68,19 @@ public class JwtService {
                 throw new IllegalStateException("인증에는 액세스 토큰만 사용할 수 있습니다.");
             }
             return Long.parseLong(claims.getSubject());
+        } catch (JwtException | IllegalArgumentException e) {
+            throw new IllegalStateException("유효하지 않은 JWT 토큰입니다.", e);
+        }
+    }
+
+    public String extractActiveRole(String token) {
+        try {
+            Claims claims = parseClaims(token);
+            String activeRole = claims.get("activeRole", String.class);
+            if (activeRole == null || activeRole.trim().isEmpty()) {
+                return "";
+            }
+            return activeRole.trim();
         } catch (JwtException | IllegalArgumentException e) {
             throw new IllegalStateException("유효하지 않은 JWT 토큰입니다.", e);
         }

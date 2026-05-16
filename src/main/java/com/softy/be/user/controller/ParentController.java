@@ -44,7 +44,7 @@ public class ParentController {
             @RequestBody ParentClassPreviewRequest request
     ) {
         Long userId = principal.userId();
-        ParentClassPreviewResult result = userAccountService.previewParentClassChange(userId, request);
+        ParentClassPreviewResult result = userAccountService.previewParentClassChange(userId, principal.activeRole(), request);
 
         ApiResponse<ParentClassPreviewData> response = ApiResponse.of(
                 true,
@@ -71,7 +71,7 @@ public class ParentController {
             @RequestBody ParentClassUpdateRequest request
     ) {
         Long userId = principal.userId();
-        ParentClassUpdateResult result = userAccountService.updateParentClass(userId, request);
+        ParentClassUpdateResult result = userAccountService.updateParentClass(userId, principal.activeRole(), request);
 
         ApiResponse<ParentClassUpdateData> response = ApiResponse.of(
                 true,
@@ -96,7 +96,7 @@ public class ParentController {
             @AuthenticationPrincipal AuthenticatedUserPrincipal principal
     ) {
         Long userId = principal.userId();
-        ParentSettingResult result = userAccountService.getParentSetting(userId);
+        ParentSettingResult result = userAccountService.getParentSetting(userId, principal.activeRole());
 
         List<ParentSettingScheduleData> schedules = result.schedules()
                 .stream()

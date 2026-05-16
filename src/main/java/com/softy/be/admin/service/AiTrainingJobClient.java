@@ -62,6 +62,7 @@ public class AiTrainingJobClient {
                     body.version,
                     body.datasetVersion,
                     body.status,
+                    body.progressPercent,
                     body.startedAt,
                     body.finishedAt,
                     body.resultCode,
@@ -74,6 +75,60 @@ public class AiTrainingJobClient {
             throw new ResponseStatusException(BAD_GATEWAY, "AI 학습 이력 API 호출에 실패했습니다. 상태코드: " + e.getStatusCode(), e);
         } catch (ResourceAccessException e) {
             throw new ResponseStatusException(GATEWAY_TIMEOUT, "AI 학습 이력 API 호출이 시간 초과되었습니다.", e);
+        } catch (IllegalArgumentException e) {
+            throw new ResponseStatusException(BAD_REQUEST, "AI 서버 URL이 올바르지 않습니다.", e);
+        }
+    }
+
+    public AiTrainingJobResult getTrainingJob(String jobId) {
+        if (isBlank(jobId)) {
+            throw new ResponseStatusException(BAD_REQUEST, "jobId는 비어 있을 수 없습니다.");
+        }
+
+        URI uri = UriComponentsBuilder
+                .fromUriString(aiServerBaseUrl)
+                .path("/ai/training-jobs/{jobId}")
+                .buildAndExpand(jobId.trim())
+                .encode()
+                .toUri();
+
+        RestTemplate restTemplate = buildRestTemplate();
+
+        try {
+            ResponseEntity<AiTrainingJobApiResponse> response = restTemplate.exchange(
+                    uri,
+                    HttpMethod.GET,
+                    null,
+                    AiTrainingJobApiResponse.class
+            );
+
+            AiTrainingJobApiResponse body = response.getBody();
+            if (body == null) {
+                throw new ResponseStatusException(BAD_GATEWAY, "AI 학습 작업 상태 응답이 비어 있습니다.");
+            }
+            if (isBlank(body.jobId)) {
+                throw new ResponseStatusException(NOT_FOUND, "학습 작업 정보를 찾을 수 없습니다.");
+            }
+
+            return new AiTrainingJobResult(
+                    body.jobId,
+                    body.modelName,
+                    body.version,
+                    body.datasetVersion,
+                    body.status,
+                    body.progressPercent,
+                    body.startedAt,
+                    body.finishedAt,
+                    body.resultCode,
+                    body.resultMessage
+            );
+        } catch (HttpStatusCodeException e) {
+            if (e.getStatusCode().value() == 404) {
+                throw new ResponseStatusException(NOT_FOUND, "학습 작업 정보를 찾을 수 없습니다.", e);
+            }
+            throw new ResponseStatusException(BAD_GATEWAY, "AI 학습 작업 상태 API 호출에 실패했습니다. 상태코드: " + e.getStatusCode(), e);
+        } catch (ResourceAccessException e) {
+            throw new ResponseStatusException(GATEWAY_TIMEOUT, "AI 학습 작업 상태 API 호출이 시간 초과되었습니다.", e);
         } catch (IllegalArgumentException e) {
             throw new ResponseStatusException(BAD_REQUEST, "AI 서버 URL이 올바르지 않습니다.", e);
         }
@@ -100,6 +155,7 @@ public class AiTrainingJobClient {
             String modelVersion,
             String datasetVersion,
             String status,
+            Integer progressPercent,
             String startedAt,
             String finishedAt,
             Integer resultCode,

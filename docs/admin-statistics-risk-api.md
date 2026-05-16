@@ -36,11 +36,11 @@
 - `data.conflictDetectionRate`: 분쟁 리스크 탐지율(0~100, 소수점 둘째 자리 반올림)
 
 ## 집계 기준
-- 대상 메시지: `message.sender.role = TEACHER`
+- 대상 메시지: 발신 사용자(`message.sender_id`)가 `TEACHER` 역할을 보유한 메시지
 - 총 메시지 수:
-  - `count(message where sender.role=TEACHER)`
+  - `count(message joined with user_role where user_role.role=TEACHER)`
 - 탐지 건수:
-  - `count(message where sender.role=TEACHER and is_dispute_risk=true)`
+  - `count(message joined with user_role where user_role.role=TEACHER and is_dispute_risk=true)`
 - 탐지율:
   - `detectedConflictCount * 100 / totalMessageCount`
   - `totalMessageCount=0`이면 `0.0`
