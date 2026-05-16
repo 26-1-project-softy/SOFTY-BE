@@ -76,8 +76,11 @@ public class User extends BaseEntity {
 
     public void applyDevLoginProfile(String name, String role) {
         this.name = name;
-        this.userRoles.clear();
-        if (role != null && !ROLE_UNASSIGNED.equalsIgnoreCase(role)) {
+        if (role != null && ROLE_UNASSIGNED.equalsIgnoreCase(role)) {
+            this.userRoles.clear();
+            return;
+        }
+        if (role != null) {
             addRole(role);
         }
     }

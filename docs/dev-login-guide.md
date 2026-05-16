@@ -17,13 +17,13 @@
 
 1. `socialId` 기준으로 `DEV_KAKAO` 소셜 계정을 조회하거나 생성합니다.
 2. `role` 파라미터를 현재 세션의 `activeRole`로 사용합니다.
-3. `role=UNASSIGNED`이면 회원가입 미완료 상태를 재현할 수 있습니다.
-4. `role=TEACHER` 또는 `role=PARENT`이면 해당 역할 세션으로 로그인합니다.
+3. `role=TEACHER` 또는 `role=PARENT`이면 해당 역할을 dev 계정의 `user_role`에 추가하고, 해당 역할 세션으로 로그인합니다.
+4. `role=UNASSIGNED`이면 dev 계정의 역할을 비우고 회원가입 미완료 상태를 재현합니다.
 
 주의:
 
-- 현재 구현상 `applyDevLoginProfile(name, role)`은 사용자의 `user_role`을 dev 요청 기준으로 재구성합니다.
-- 즉 같은 `socialId`로 `role`을 바꿔 호출하면 해당 dev 계정의 역할 상태도 함께 바뀝니다.
+- 같은 `socialId`로 `role=TEACHER`, `role=PARENT`를 순서대로 호출하면 한 dev 계정이 두 역할을 모두 보유할 수 있습니다.
+- `role=UNASSIGNED`는 예외적으로 기존 역할을 모두 제거합니다.
 
 ## 요청 파라미터
 
@@ -50,9 +50,10 @@ curl -X POST "http://localhost:8080/auth/dev-login?socialId=test-001&role=TEACHE
 ## 예시 시나리오
 
 - 같은 `socialId`로 다시 호출하면 같은 사용자 계정으로 로그인됩니다.
-- `role=UNASSIGNED`이면 회원가입 전 상태를 재현할 수 있습니다.
 - `role=TEACHER`로 로그인하면 현재 세션 `activeRole`은 `TEACHER`입니다.
 - `role=PARENT`로 로그인하면 현재 세션 `activeRole`은 `PARENT`입니다.
+- 같은 `socialId`로 먼저 `role=TEACHER`, 이후 `role=PARENT`로 로그인하면 해당 계정은 `TEACHER`, `PARENT`를 모두 보유하게 됩니다.
+- `role=UNASSIGNED`이면 기존 역할을 비우고 회원가입 전 상태를 재현할 수 있습니다.
 
 ## 주의사항
 
