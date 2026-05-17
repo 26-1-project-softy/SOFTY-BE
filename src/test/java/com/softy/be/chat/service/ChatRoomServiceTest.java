@@ -354,6 +354,37 @@ class ChatRoomServiceTest {
     }
 
     @Test
+    void sendChatRoomMessageRejectsSelfChat() {
+        User multiRoleUser = User.createForKakao("teacher-parent");
+        multiRoleUser.completeTeacherSignup("teacher-parent");
+        multiRoleUser.completeParentSignup("teacher-parent");
+        ReflectionTestUtils.setField(multiRoleUser, "id", 1L);
+
+        ChatRoom chatRoom = ChatRoom.create("CONSULT", ChatRoomStatus.IN_PROGRESS);
+        ReflectionTestUtils.setField(chatRoom, "id", 15L);
+
+        ChatRoomUserMap parentMapping = ChatRoomUserMap.create(chatRoom, multiRoleUser, ROLE_PARENT, 0, null);
+        ChatRoomUserMap teacherMapping = ChatRoomUserMap.create(chatRoom, multiRoleUser, ROLE_TEACHER, 0, null);
+
+        when(userRepository.findById(1L)).thenReturn(Optional.of(multiRoleUser));
+        when(chatRoomRepository.findById(15L)).thenReturn(Optional.of(chatRoom));
+        when(chatRoomUserMapRepository.findAllByChatRoomId(15L)).thenReturn(List.of(parentMapping, teacherMapping));
+
+        assertThatThrownBy(() -> chatRoomService.sendChatRoomMessage(
+                1L,
+                ROLE_PARENT,
+                15L,
+                new ChatRoomMessageSendRequest("message")
+        ))
+                .isInstanceOf(ResponseStatusException.class)
+                .satisfies(exception -> {
+                    ResponseStatusException responseStatusException = (ResponseStatusException) exception;
+                    assertThat(responseStatusException.getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
+                    assertThat(responseStatusException.getReason()).isEqualTo("본인에게는 메시지를 보낼 수 없습니다.");
+                });
+    }
+
+    @Test
     void sendTeacherMessagePreservesLeadingAndTrailingWhitespace() {
         User teacher = User.createForKakao("teacher");
         teacher.completeTeacherSignup("teacher");
@@ -451,6 +482,49 @@ class ChatRoomServiceTest {
                 .isInstanceOf(ResponseStatusException.class)
                 .satisfies(exception -> assertThat(((ResponseStatusException) exception).getStatusCode())
                         .isEqualTo(HttpStatus.FORBIDDEN));
+    }
+
+    @Test
+    void sendTeacherMessageRejectsSelfChat() {
+        User multiRoleUser = User.createForKakao("teacher-parent");
+        multiRoleUser.completeTeacherSignup("teacher-parent");
+        multiRoleUser.completeParentSignup("teacher-parent");
+        ReflectionTestUtils.setField(multiRoleUser, "id", 1L);
+
+        ChatRoom chatRoom = ChatRoom.create("CONSULT", ChatRoomStatus.IN_PROGRESS);
+        ReflectionTestUtils.setField(chatRoom, "id", 15L);
+
+        ChatRoomUserMap teacherMapping = ChatRoomUserMap.create(chatRoom, multiRoleUser, ROLE_TEACHER, 0, null);
+        ChatRoomUserMap parentMapping = ChatRoomUserMap.create(chatRoom, multiRoleUser, ROLE_PARENT, 0, null);
+
+        MessageAnalysis analysis = MessageAnalysis.create(
+                chatRoom,
+                multiRoleUser,
+                "draft",
+                "SAFE",
+                null,
+                LocalDateTime.of(2026, 5, 14, 10, 0)
+        );
+        ReflectionTestUtils.setField(analysis, "id", 31L);
+
+        when(userRepository.findById(1L)).thenReturn(Optional.of(multiRoleUser));
+        when(chatRoomRepository.findById(15L)).thenReturn(Optional.of(chatRoom));
+        when(chatRoomUserMapRepository.findByChatRoomIdAndUserIdAndParticipantRole(15L, 1L, ROLE_TEACHER))
+                .thenReturn(Optional.of(teacherMapping));
+        when(chatRoomUserMapRepository.findAllByChatRoomId(15L)).thenReturn(List.of(teacherMapping, parentMapping));
+
+        assertThatThrownBy(() -> chatRoomService.sendTeacherMessage(
+                1L,
+                ROLE_TEACHER,
+                15L,
+                new TeacherMessageSendRequest(31L, "message")
+        ))
+                .isInstanceOf(ResponseStatusException.class)
+                .satisfies(exception -> {
+                    ResponseStatusException responseStatusException = (ResponseStatusException) exception;
+                    assertThat(responseStatusException.getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
+                    assertThat(responseStatusException.getReason()).isEqualTo("본인에게는 메시지를 보낼 수 없습니다.");
+                });
     }
 
     @Test

@@ -179,6 +179,7 @@ public class AdminStatisticsService {
                 row.getFeedbackId(),
                 row.getTeacherName(),
                 row.getFeedbackResult(),
+                row.getRiskLevel(),
                 row.getOriginalMessage(),
                 row.getCreatedAt()
         );

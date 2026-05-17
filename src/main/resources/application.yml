@@ -17,6 +17,8 @@ spring:
     time-zone: Asia/Seoul
 
 server:
+  error:
+    include-message: always
   tomcat:
     accesslog:
       enabled: true

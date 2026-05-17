@@ -33,6 +33,7 @@
         "feedbackId": 1,
         "teacherName": "김 선생",
         "feedbackResult": 5,
+        "riskLevel": "UNSAFE",
         "originalMessage": "철수의 결석 사유를 확인했습니다.",
         "createdAt": "2026-03-24T10:30:00"
       }
@@ -53,6 +54,8 @@
   - 교사 이름
 - `data.items[].feedbackResult` (Integer)
   - 교사가 남긴 피드백 점수
+- `data.items[].riskLevel` (String)
+  - AI媛 ?먮떒??遺꾩웳 媛?μ꽦 寃곌낵
 - `data.items[].originalMessage` (String)
   - AI가 분석한 교사 메시지 원문
 - `data.items[].createdAt` (String)
