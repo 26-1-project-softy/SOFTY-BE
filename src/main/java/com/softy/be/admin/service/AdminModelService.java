@@ -89,8 +89,7 @@ public class AdminModelService {
 
         return new AdminRetrainingJobData(
                 nullToEmpty(result.jobId()),
-                normalizeStatus(result.status()),
-                result.progressPercent()
+                normalizeStatus(result.status())
         );
     }
 
