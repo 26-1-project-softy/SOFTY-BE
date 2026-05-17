@@ -6,6 +6,7 @@ public record AdminRiskFeedbackItemData(
         Long feedbackId,
         String teacherName,
         Integer feedbackResult,
+        String riskLevel,
         String originalMessage,
         LocalDateTime createdAt
 ) {

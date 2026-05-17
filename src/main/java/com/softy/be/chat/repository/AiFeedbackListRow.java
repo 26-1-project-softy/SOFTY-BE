@@ -10,6 +10,8 @@ public interface AiFeedbackListRow {
 
     Integer getFeedbackResult();
 
+    String getRiskLevel();
+
     String getOriginalMessage();
 
     LocalDateTime getCreatedAt();

@@ -68,6 +68,7 @@ public class ChatRoomService {
     private static final String MESSAGE_TYPE_TEXT = "TEXT";
     private static final String AI_FEEDBACK_TYPE_RISK_ANALYSIS = "RISK_ANALYSIS";
     private static final String RISK_LEVEL_UNSAFE = "UNSAFE";
+    private static final String SELF_CHAT_MESSAGE_SEND_FORBIDDEN_MESSAGE = "본인에게는 메시지를 보낼 수 없습니다.";
     private static final ZoneId SEOUL_ZONE_ID = ZoneId.of("Asia/Seoul");
     private static final int MAX_PAGE_SIZE = 100;
 
@@ -237,6 +238,8 @@ public class ChatRoomService {
 
         User teacher = getTeacherUser(userId, activeRole);
         ChatRoomUserMap senderMapping = getChatRoomParticipantMapping(chatRoomId, userId, activeRole);
+        List<ChatRoomUserMap> mappings = chatRoomUserMapRepository.findAllByChatRoomId(chatRoomId);
+        validateMessageSendTargetIsNotSelf(mappings, userId, activeRole);
         validateChatRoomIsNotCompleted(senderMapping.getChatRoom());
         MessageAnalysis analysis = messageAnalysisRepository.findById(request.analysisId())
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "메시지 분석 결과를 찾을 수 없습니다."));
@@ -275,7 +278,7 @@ public class ChatRoomService {
 
         LocalDateTime now = LocalDateTime.now();
         senderMapping.markAsRead(now);
-        chatRoomUserMapRepository.findAllByChatRoomId(chatRoomId).stream()
+        mappings.stream()
                 .filter(mapping -> !mapping.getUser().getId().equals(userId))
                 .forEach(ChatRoomUserMap::increaseUnreadCount);
 
@@ -306,6 +309,7 @@ public class ChatRoomService {
                 .findFirst()
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.FORBIDDEN, "해당 채팅방에 접근할 권한이 없습니다."));
 
+        validateMessageSendTargetIsNotSelf(mappings, userId, activeRole);
         ChatRoomUserMap receiverMapping = mappings.stream()
                 .filter(mapping -> !mapping.getUser().getId().equals(userId))
                 .findFirst()
@@ -557,6 +561,18 @@ public class ChatRoomService {
 
         return chatRoomUserMapRepository.findByChatRoomIdAndUserIdAndParticipantRole(chatRoomId, userId, activeRole)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.FORBIDDEN, "해당 채팅방에 접근할 권한이 없습니다."));
+    }
+
+    private void validateMessageSendTargetIsNotSelf(List<ChatRoomUserMap> mappings, Long userId, String activeRole) {
+        String counterpartRole = ROLE_PARENT.equalsIgnoreCase(activeRole) ? ROLE_TEACHER : ROLE_PARENT;
+
+        boolean isSelfChat = mappings.stream()
+                .filter(mapping -> counterpartRole.equalsIgnoreCase(mapping.getParticipantRole()))
+                .anyMatch(mapping -> mapping.getUser().getId().equals(userId));
+
+        if (isSelfChat) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, SELF_CHAT_MESSAGE_SEND_FORBIDDEN_MESSAGE);
+        }
     }
 
     private void validateIntentRequest(InitMessageIntentRequest request) {
