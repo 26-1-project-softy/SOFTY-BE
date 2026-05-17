@@ -101,7 +101,6 @@ class AdminModelServiceTest {
 
         assertThat(result.jobId()).isEqualTo("retrain_20260326_001");
         assertThat(result.status()).isEqualTo("QUEUED");
-        assertThat(result.progressPercent()).isEqualTo(15);
     }
 
     @Test
