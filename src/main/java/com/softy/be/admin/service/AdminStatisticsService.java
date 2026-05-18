@@ -102,14 +102,14 @@ public class AdminStatisticsService {
         }
 
         String normalizedRiskLevel = normalizeOptionalUppercaseValue(riskLevel);
-        String normalizedTeacherName = normalizeOptionalValue(teacherName);
+        String normalizedTeacherNamePattern = toContainsPattern(teacherName);
         LocalDateTime startDateTime = startDate == null ? null : startDate.atStartOfDay();
         LocalDateTime endDateTime = endDate == null ? null : endDate.plusDays(1).atStartOfDay();
 
         Page<AiFeedbackListRow> feedbackPage = aiFeedbackRepository.findRiskFeedbacks(
                 normalizedRiskLevel,
                 feedbackResult,
-                normalizedTeacherName,
+                normalizedTeacherNamePattern,
                 startDateTime,
                 endDateTime,
                 PageRequest.of(page - 1, size)
@@ -201,6 +201,16 @@ public class AdminStatisticsService {
     private String normalizeOptionalUppercaseValue(String value) {
         String normalized = normalizeOptionalValue(value);
         return normalized == null ? null : normalized.toUpperCase(Locale.ROOT);
+    }
+
+    private String normalizeOptionalLowercaseValue(String value) {
+        String normalized = normalizeOptionalValue(value);
+        return normalized == null ? null : normalized.toLowerCase(Locale.ROOT);
+    }
+
+    private String toContainsPattern(String value) {
+        String normalized = normalizeOptionalLowercaseValue(value);
+        return normalized == null ? null : "%" + normalized + "%";
     }
 
     private AdminTeacherPdfCountData toTeacherPdfCountData(TeacherPdfCountRow row) {

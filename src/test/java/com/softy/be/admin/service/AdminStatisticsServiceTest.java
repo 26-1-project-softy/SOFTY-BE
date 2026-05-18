@@ -100,7 +100,7 @@ class AdminStatisticsServiceTest {
         when(aiFeedbackRepository.findRiskFeedbacks(
                 eq("UNSAFE"),
                 eq(2),
-                eq("김"),
+                eq("%김%"),
                 eq(LocalDateTime.of(2026, 5, 1, 0, 0)),
                 eq(LocalDateTime.of(2026, 5, 19, 0, 0)),
                 any()
