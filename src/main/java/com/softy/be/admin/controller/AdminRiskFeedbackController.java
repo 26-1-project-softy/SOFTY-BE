@@ -6,11 +6,14 @@ import com.softy.be.common.api.ApiResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+
+import java.time.LocalDate;
 
 @RestController
 @RequestMapping("/admin/risk-feedbacks")
@@ -27,9 +30,24 @@ public class AdminRiskFeedbackController {
     )
     public ResponseEntity<ApiResponse<AdminRiskFeedbackListData>> getRiskFeedbacks(
             @RequestParam(value = "page", defaultValue = "1") int page,
-            @RequestParam(value = "size", defaultValue = "20") int size
+            @RequestParam(value = "size", defaultValue = "20") int size,
+            @RequestParam(value = "riskLevel", required = false) String riskLevel,
+            @RequestParam(value = "feedbackResult", required = false) Integer feedbackResult,
+            @RequestParam(value = "teacherName", required = false) String teacherName,
+            @RequestParam(value = "startDate", required = false)
+            @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
+            @RequestParam(value = "endDate", required = false)
+            @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate
     ) {
-        AdminRiskFeedbackListData data = adminStatisticsService.getRiskFeedbacks(page, size);
+        AdminRiskFeedbackListData data = adminStatisticsService.getRiskFeedbacks(
+                page,
+                size,
+                riskLevel,
+                feedbackResult,
+                teacherName,
+                startDate,
+                endDate
+        );
 
         ApiResponse<AdminRiskFeedbackListData> response = ApiResponse.of(
                 true,

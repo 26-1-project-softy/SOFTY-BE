@@ -25,7 +25,10 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Locale;
 
 import static org.springframework.http.HttpStatus.BAD_REQUEST;
 
@@ -76,15 +79,39 @@ public class AdminStatisticsService {
     }
 
     @Transactional(readOnly = true)
-    public AdminRiskFeedbackListData getRiskFeedbacks(int page, int size) {
+    public AdminRiskFeedbackListData getRiskFeedbacks(
+            int page,
+            int size,
+            String riskLevel,
+            Integer feedbackResult,
+            String teacherName,
+            LocalDate startDate,
+            LocalDate endDate
+    ) {
         if (page < 1) {
             throw new ResponseStatusException(BAD_REQUEST, "page는 1 이상이어야 합니다.");
         }
         if (size < 1) {
             throw new ResponseStatusException(BAD_REQUEST, "size는 1 이상이어야 합니다.");
         }
+        if (startDate != null && endDate != null && startDate.isAfter(endDate)) {
+            throw new ResponseStatusException(BAD_REQUEST, "startDate는 endDate보다 늦을 수 없습니다.");
+        }
+        if (feedbackResult != null && (feedbackResult < 1 || feedbackResult > 5)) {
+            throw new ResponseStatusException(BAD_REQUEST, "feedbackResult는 1 이상 5 이하여야 합니다.");
+        }
+
+        String normalizedRiskLevel = normalizeOptionalUppercaseValue(riskLevel);
+        String normalizedTeacherName = normalizeOptionalValue(teacherName);
+        LocalDateTime startDateTime = startDate == null ? null : startDate.atStartOfDay();
+        LocalDateTime endDateTime = endDate == null ? null : endDate.plusDays(1).atStartOfDay();
 
         Page<AiFeedbackListRow> feedbackPage = aiFeedbackRepository.findRiskFeedbacks(
+                normalizedRiskLevel,
+                feedbackResult,
+                normalizedTeacherName,
+                startDateTime,
+                endDateTime,
                 PageRequest.of(page - 1, size)
         );
 
@@ -169,6 +196,11 @@ public class AdminStatisticsService {
 
         String normalized = value.trim();
         return normalized.isEmpty() ? null : normalized;
+    }
+
+    private String normalizeOptionalUppercaseValue(String value) {
+        String normalized = normalizeOptionalValue(value);
+        return normalized == null ? null : normalized.toUpperCase(Locale.ROOT);
     }
 
     private AdminTeacherPdfCountData toTeacherPdfCountData(TeacherPdfCountRow row) {

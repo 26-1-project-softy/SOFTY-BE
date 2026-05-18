@@ -17,12 +17,15 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
@@ -62,7 +65,14 @@ class AdminStatisticsServiceTest {
                 createdAt
         );
 
-        when(aiFeedbackRepository.findRiskFeedbacks(any())).thenReturn(
+        when(aiFeedbackRepository.findRiskFeedbacks(
+                isNull(),
+                isNull(),
+                isNull(),
+                isNull(),
+                isNull(),
+                any()
+        )).thenReturn(
                 new PageImpl<>(
                         List.of(row),
                         PageRequest.of(1, 10),
@@ -70,7 +80,7 @@ class AdminStatisticsServiceTest {
                 )
         );
 
-        AdminRiskFeedbackListData result = adminStatisticsService.getRiskFeedbacks(2, 10);
+        AdminRiskFeedbackListData result = adminStatisticsService.getRiskFeedbacks(2, 10, null, null, null, null, null);
 
         assertThat(result.page()).isEqualTo(2);
         assertThat(result.size()).isEqualTo(10);
@@ -86,8 +96,40 @@ class AdminStatisticsServiceTest {
     }
 
     @Test
+    void getRiskFeedbacksAppliesFilters() {
+        when(aiFeedbackRepository.findRiskFeedbacks(
+                eq("UNSAFE"),
+                eq(2),
+                eq("김"),
+                eq(LocalDateTime.of(2026, 5, 1, 0, 0)),
+                eq(LocalDateTime.of(2026, 5, 19, 0, 0)),
+                any()
+        )).thenReturn(
+                new PageImpl<>(
+                        List.of(),
+                        PageRequest.of(0, 20),
+                        0
+                )
+        );
+
+        AdminRiskFeedbackListData result = adminStatisticsService.getRiskFeedbacks(
+                1,
+                20,
+                "unsafe",
+                2,
+                " 김 ",
+                LocalDate.of(2026, 5, 1),
+                LocalDate.of(2026, 5, 18)
+        );
+
+        assertThat(result.items()).isEmpty();
+        assertThat(result.page()).isEqualTo(1);
+        assertThat(result.size()).isEqualTo(20);
+    }
+
+    @Test
     void getRiskFeedbacksRejectsInvalidPage() {
-        assertThatThrownBy(() -> adminStatisticsService.getRiskFeedbacks(0, 20))
+        assertThatThrownBy(() -> adminStatisticsService.getRiskFeedbacks(0, 20, null, null, null, null, null))
                 .isInstanceOf(ResponseStatusException.class)
                 .satisfies(exception -> assertThat(((ResponseStatusException) exception).getStatusCode())
                         .isEqualTo(HttpStatus.BAD_REQUEST));
@@ -97,7 +139,35 @@ class AdminStatisticsServiceTest {
 
     @Test
     void getRiskFeedbacksRejectsInvalidSize() {
-        assertThatThrownBy(() -> adminStatisticsService.getRiskFeedbacks(1, 0))
+        assertThatThrownBy(() -> adminStatisticsService.getRiskFeedbacks(1, 0, null, null, null, null, null))
+                .isInstanceOf(ResponseStatusException.class)
+                .satisfies(exception -> assertThat(((ResponseStatusException) exception).getStatusCode())
+                        .isEqualTo(HttpStatus.BAD_REQUEST));
+
+        verifyNoInteractions(aiFeedbackRepository);
+    }
+
+    @Test
+    void getRiskFeedbacksRejectsInvalidDateRange() {
+        assertThatThrownBy(() -> adminStatisticsService.getRiskFeedbacks(
+                1,
+                20,
+                null,
+                null,
+                null,
+                LocalDate.of(2026, 5, 19),
+                LocalDate.of(2026, 5, 18)
+        ))
+                .isInstanceOf(ResponseStatusException.class)
+                .satisfies(exception -> assertThat(((ResponseStatusException) exception).getStatusCode())
+                        .isEqualTo(HttpStatus.BAD_REQUEST));
+
+        verifyNoInteractions(aiFeedbackRepository);
+    }
+
+    @Test
+    void getRiskFeedbacksRejectsInvalidFeedbackResult() {
+        assertThatThrownBy(() -> adminStatisticsService.getRiskFeedbacks(1, 20, null, 6, null, null, null))
                 .isInstanceOf(ResponseStatusException.class)
                 .satisfies(exception -> assertThat(((ResponseStatusException) exception).getStatusCode())
                         .isEqualTo(HttpStatus.BAD_REQUEST));
