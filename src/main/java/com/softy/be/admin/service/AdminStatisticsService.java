@@ -23,8 +23,11 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.util.List;
+
+import static org.springframework.http.HttpStatus.BAD_REQUEST;
 
 @Service
 @RequiredArgsConstructor
@@ -74,11 +77,15 @@ public class AdminStatisticsService {
 
     @Transactional(readOnly = true)
     public AdminRiskFeedbackListData getRiskFeedbacks(int page, int size) {
-        int normalizedPage = Math.max(page, 1);
-        int normalizedSize = Math.max(size, 1);
+        if (page < 1) {
+            throw new ResponseStatusException(BAD_REQUEST, "page는 1 이상이어야 합니다.");
+        }
+        if (size < 1) {
+            throw new ResponseStatusException(BAD_REQUEST, "size는 1 이상이어야 합니다.");
+        }
 
         Page<AiFeedbackListRow> feedbackPage = aiFeedbackRepository.findRiskFeedbacks(
-                PageRequest.of(normalizedPage - 1, normalizedSize)
+                PageRequest.of(page - 1, size)
         );
 
         List<AdminRiskFeedbackItemData> items = feedbackPage.getContent()
@@ -88,8 +95,8 @@ public class AdminStatisticsService {
 
         return new AdminRiskFeedbackListData(
                 items,
-                normalizedPage,
-                normalizedSize,
+                page,
+                size,
                 feedbackPage.getTotalElements(),
                 feedbackPage.getTotalPages()
         );
