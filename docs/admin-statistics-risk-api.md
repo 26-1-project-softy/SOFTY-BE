@@ -36,11 +36,11 @@
 - `data.conflictDetectionRate`: 분쟁 리스크 탐지율(0~100, 소수점 둘째 자리 반올림)
 
 ## 집계 기준
-- 대상 메시지: 발신 사용자(`message.sender_id`)가 `TEACHER` 역할을 보유한 메시지
+- 대상 메시지: 발신 사용자가 `user_role=TEACHER`를 보유하면서, 해당 채팅방 참여 역할(`chat_room_user_map.participant_role`)도 `TEACHER`인 메시지
 - 총 메시지 수:
-  - `count(message joined with user_role where user_role.role=TEACHER)`
+  - `count(message joined with user_role, chat_room_user_map where user_role.role=TEACHER and participant_role=TEACHER)`
 - 탐지 건수:
-  - `count(message joined with user_role where user_role.role=TEACHER and is_dispute_risk=true)`
+  - `count(message joined with user_role, chat_room_user_map where user_role.role=TEACHER and participant_role=TEACHER and is_dispute_risk=true)`
 - 탐지율:
   - `detectedConflictCount * 100 / totalMessageCount`
   - `totalMessageCount=0`이면 `0.0`

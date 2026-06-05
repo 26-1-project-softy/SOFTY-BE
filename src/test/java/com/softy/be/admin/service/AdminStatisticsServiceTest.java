@@ -1,6 +1,7 @@
 package com.softy.be.admin.service;
 
 import com.softy.be.admin.dto.AdminRiskFeedbackListData;
+import com.softy.be.admin.dto.AdminRiskStatisticsData;
 import com.softy.be.chat.repository.AiFeedbackListRow;
 import com.softy.be.admin.dto.AdminTokenUsageData;
 import com.softy.be.chat.repository.AiFeedbackRepository;
@@ -52,6 +53,18 @@ class AdminStatisticsServiceTest {
 
     @InjectMocks
     private AdminStatisticsService adminStatisticsService;
+
+    @Test
+    void getRiskStatisticsUsesTeacherMessageCountsForDashboard() {
+        when(messageRepository.countTeacherMessages()).thenReturn(10L);
+        when(messageRepository.countTeacherDisputeRiskMessages()).thenReturn(4L);
+
+        AdminRiskStatisticsData result = adminStatisticsService.getRiskStatistics();
+
+        assertThat(result.totalMessageCount()).isEqualTo(10L);
+        assertThat(result.detectedConflictCount()).isEqualTo(4L);
+        assertThat(result.conflictDetectionRate()).isEqualTo(40.0);
+    }
 
     @Test
     void getRiskFeedbacksReturnsPagedResult() {
