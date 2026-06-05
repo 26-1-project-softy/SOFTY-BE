@@ -42,20 +42,28 @@ public interface MessageRepository extends JpaRepository<Message, Long> {
     boolean existsOlderMessage(@Param("chatRoomId") Long chatRoomId, @Param("cursor") Long cursor);
 
     @Query("""
-            SELECT COUNT(m)
+            SELECT COUNT(DISTINCT m.id)
             FROM Message m
             JOIN m.sender s
-            JOIN s.userRoles ur
-            WHERE UPPER(ur.role) = 'TEACHER'
+            JOIN s.userRoles ur,
+                 ChatRoomUserMap crm
+            WHERE crm.chatRoom = m.chatRoom
+              AND crm.user = s
+              AND UPPER(ur.role) = 'TEACHER'
+              AND UPPER(crm.participantRole) = 'TEACHER'
             """)
     long countTeacherMessages();
 
     @Query("""
-            SELECT COUNT(m)
+            SELECT COUNT(DISTINCT m.id)
             FROM Message m
             JOIN m.sender s
-            JOIN s.userRoles ur
-            WHERE UPPER(ur.role) = 'TEACHER'
+            JOIN s.userRoles ur,
+                 ChatRoomUserMap crm
+            WHERE crm.chatRoom = m.chatRoom
+              AND crm.user = s
+              AND UPPER(ur.role) = 'TEACHER'
+              AND UPPER(crm.participantRole) = 'TEACHER'
               AND m.isDisputeRisk = true
             """)
     long countTeacherDisputeRiskMessages();
